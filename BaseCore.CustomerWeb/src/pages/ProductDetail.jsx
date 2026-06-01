@@ -97,6 +97,19 @@ export default function ProductDetail() {
   const discount = product.oldPrice ? Math.round((1 - product.price / product.oldPrice) * 100) : null
   const productImages = product.imageUrl ? [product.imageUrl] : ['https://via.placeholder.com/400']
 
+  // Hàm tính giá theo giới tính đã chọn
+  const getPrice = () => {
+    if (isGenderProduct && !selectedGender) return product.price || 0
+    if (selectedGender === 'Cặp') {
+      // Cặp đôi = 2 con, nên giá = 2x
+      return product.pairPrice || ((product.price || 0) * 2)
+    }
+    return product.price || 0
+  }
+
+  const currentPrice = getPrice()
+  const totalPrice = currentPrice * qty
+
   const handleAdd = async () => {
     if (isGenderProduct && !selectedGender) {
       setGenderError('Vui lòng chọn giới tính trước khi thêm vào giỏ')
@@ -170,9 +183,10 @@ export default function ProductDetail() {
             })()}
 
             <div className={styles.priceBlock}>
-              <span className={styles.price}>{formatPrice(product.price)}</span>
+              <span className={styles.price}>{formatPrice(currentPrice)}</span>
               {product.oldPrice && <span className={styles.oldPrice}>{formatPrice(product.oldPrice)}</span>}
               {discount && <span className={styles.save}>Tiết kiệm {discount}%</span>}
+              {selectedGender === 'Cặp' && <span style={{ fontSize: '0.8rem', color: '#666', marginLeft: '0.5rem' }}>(2 con)</span>}
             </div>
 
             {/* Stock info */}
@@ -247,6 +261,13 @@ export default function ProductDetail() {
                 <button onClick={() => setQty(q => q + 1)}>+</button>
               </div>
             </div>
+
+            {(isGenderProduct && selectedGender) || !isGenderProduct ? (
+              <div style={{ background: '#f9f9f9', borderRadius: 8, padding: '0.6rem 0.9rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', color: '#666' }}>Tạm tính:</span>
+                <strong style={{ fontSize: '1.05rem', color: '#e65100' }}>{formatPrice(totalPrice)}</strong>
+              </div>
+            ) : null}
 
             <div className={styles.actions}>
               <button className={`${styles.btnAdd} ${added ? styles.added : ''}`} onClick={handleAdd} disabled={isOutOfStock}>

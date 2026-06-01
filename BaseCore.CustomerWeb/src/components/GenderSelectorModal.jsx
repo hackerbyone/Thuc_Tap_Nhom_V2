@@ -71,6 +71,19 @@ export default function GenderSelectorModal({
 
   const selectedStock = getSelectedGenderStock()
 
+  // Hàm tính giá theo giới tính đã chọn
+  const getPrice = () => {
+    if (!selectedGender) return product.price || 0
+    if (selectedGender === 'Cặp') {
+      // Cặp đôi = 2 con, nên giá = 2x
+      return product.pairPrice || ((product.price || 0) * 2)
+    }
+    return product.price || 0
+  }
+
+  const currentPrice = getPrice()
+  const totalPrice = currentPrice * quantity
+
   return (
     <div className={styles.overlay} onClick={handleClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
@@ -162,10 +175,9 @@ export default function GenderSelectorModal({
 
           {/* Price info */}
           <div className={styles.priceInfo}>
-            <span>Giá:</span>
+            <span>Tạm tính:</span>
             <strong>
-              {product.price?.toLocaleString('vi-VN') || '0'}đ
-              {selectedGender === 'Cặp' && <small> (2 con)</small>}
+              {totalPrice.toLocaleString('vi-VN')}đ
             </strong>
           </div>
         </div>

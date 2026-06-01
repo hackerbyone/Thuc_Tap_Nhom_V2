@@ -30,7 +30,18 @@ function GenderPopup({ product, onConfirm, onClose }) {
     setQty(q => Math.min(maxQty, Math.max(1, q + delta)))
   }
 
-  const totalPrice = product.price * qty
+  // Hàm tính giá theo giới tính đã chọn
+  const getPrice = () => {
+    if (!selected) return product.price || 0
+    if (selected === 'Cặp') {
+      // Cặp đôi = 2 con, nên giá = 2x
+      return product.pairPrice || ((product.price || 0) * 2)
+    }
+    return product.price || 0
+  }
+
+  const currentPrice = getPrice()
+  const totalPrice = currentPrice * qty
 
   return (
     <div

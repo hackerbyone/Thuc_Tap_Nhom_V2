@@ -71,7 +71,8 @@ export default function Cart() {
         'Standard',
         'COD',
         checkoutData.customerName,
-        checkoutData.customerPhone
+        checkoutData.customerPhone,
+        shipping
       )
       clear()
       closeCheckoutModal()

@@ -38,8 +38,7 @@ export default function Payment() {
   const initialData  = location.state?.order || null
   const [order, setOrder]             = useState(null)
   const [pageLoading, setPageLoading] = useState(true)
-  const [timeLeft, setTimeLeft]       = useState(null)
-  const [cancelTimeLeft, setCancelTimeLeft] = useState(null)
+  const [timeLeft, setTimeLeft]       = useState(null)  // 24h countdown
   const [copied, setCopied]           = useState(null)
   const [status, setStatus]           = useState(initialData?.status || 'WaitingDeposit')
   const [cancelling, setCancelling]   = useState(false)
@@ -75,23 +74,25 @@ export default function Payment() {
       .finally(() => setPageLoading(false))
   }, [orderId, user, authLoading])
 
-  /* ─── Đếm ngược 24h ─── */
+  /* ─── Đếm ngược 24h để thanh toán ─── */
   useEffect(() => {
     const d = order?.orderDate
     if (!d) return
     const deadline = new Date(d).getTime() + 24 * 3600 * 1000
-    const tick = () => setTimeLeft(deadline - Date.now())
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [order?.orderDate])
-
-  /* ─── Đếm ngược 3h để hủy ─── */
-  useEffect(() => {
-    const d = order?.orderDate
-    if (!d) return
-    const deadline = new Date(d).getTime() + 3 * 3600 * 1000
-    const tick = () => setCancelTimeLeft(deadline - Date.now())
+    const tick = () => {
+      const remaining = deadline - Date.now()
+      setTimeLeft(remaining)
+      // Nếu quá 24h, auto refresh để check auto-cancel
+      if (remaining <= 0) {
+        orderService.getById(orderId)
+          .then(data => {
+            const o = data.order || data
+            setStatus(o.status)
+            setOrder(o)
+          })
+          .catch(() => {})
+      }
+    }
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
@@ -146,7 +147,7 @@ export default function Payment() {
   }
 
   const isExpired  = timeLeft !== null && timeLeft <= 0
-  const canCancel  = status === 'WaitingDeposit' && cancelTimeLeft !== null && cancelTimeLeft > 0
+  const canCancel  = status === 'WaitingDeposit' && timeLeft !== null && timeLeft > 0
   const isPaid     = ['DepositPaid', 'Processing', 'Shipping', 'Completed'].includes(status)
   const isCancelled = status === 'Cancelled'
   const statusInfo = STATUS_LABELS[status] || { text: status, color: '#555', bg: '#f5f5f5' }
@@ -366,23 +367,26 @@ export default function Payment() {
               </div>
             )}
 
-            {/* Hủy đơn trong 3h */}
+            {/* Hủy đơn - trong 24h chưa thanh toán */}
             {canCancel && (
               <div className={styles.cancelSection}>
                 <div className={styles.cancelInfo}>
-                  <span>Có thể hủy trong: </span>
-                  <strong className={cancelTimeLeft < 900000 ? styles.urgentText : ''}>
-                    {formatCountdown(cancelTimeLeft)}
+                  <span>⏱️ Thời gian hủy đơn: </span>
+                  <strong className={timeLeft < 3600000 ? styles.urgentText : ''}>
+                    {formatCountdown(timeLeft)}
                   </strong>
                 </div>
                 <button className={styles.cancelBtn} onClick={handleCancel} disabled={cancelling}>
-                  {cancelling ? 'Đang hủy...' : 'Hủy đơn hàng'}
+                  {cancelling ? 'Đang hủy...' : '❌ Hủy đơn hàng'}
                 </button>
               </div>
             )}
 
-            {status === 'WaitingDeposit' && !canCancel && cancelTimeLeft !== null && cancelTimeLeft <= 0 && (
-              <div className={styles.cancelExpired}>Đã quá 3 giờ — không thể hủy đơn hàng</div>
+            {/* Hủy hết hạn hoặc đã hủy */}
+            {!canCancel && status === 'WaitingDeposit' && (
+              <div className={styles.cancelExpired}>
+                {isExpired ? '⛔ Quá 24h — đơn hàng đã tự động hủy' : ''}
+              </div>
             )}
 
             {/* Lưu ý */}
@@ -393,7 +397,8 @@ export default function Payment() {
                 <li>Số tiền phải đúng: <strong>{formatPrice(depositAmount)}</strong></li>
                 <li>Admin xác nhận trong vài phút sau khi nhận chuyển khoản</li>
                 <li>Phần còn lại <strong>{formatPrice(totalAmount - depositAmount)}</strong> thanh toán khi nhận hàng</li>
-                <li>Chỉ hủy được trong <strong>3 giờ đầu</strong> sau khi đặt</li>
+                <li>Bạn có thể <strong>hủy đơn bất cứ lúc nào trong 24h</strong> nếu chưa thanh toán</li>
+                <li>Sau <strong>24 giờ</strong> mà chưa thanh toán, đơn hàng sẽ <strong>tự động hủy</strong></li>
               </ul>
             </div>
 

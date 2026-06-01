@@ -34,8 +34,17 @@ namespace BaseCore.Services
         }
 
         // 1 cặp = 2 con (đực + cái) → giá nhân đôi
-        private static decimal GetEffectivePrice(decimal basePrice, string? selectedGender)
-            => selectedGender == "Cặp" ? basePrice * 2 : basePrice;
+        private static decimal GetEffectivePrice(Product? product, string? selectedGender)
+        {
+            if (product is null) return 0;
+            
+            if (selectedGender == "Cặp")
+            {
+                // Nếu có pairPrice, dùng nó; nếu không thì dùng price
+                return product.PairPrice ?? product.Price;
+            }
+            return product.Price;
+        }
 
         private static CartDto MapToDto(Cart? cart)
         {
@@ -49,13 +58,13 @@ namespace BaseCore.Services
                     Id = i.Id,
                     ProductId = i.ProductId,
                     ProductName = i.Product?.Name ?? string.Empty,
-                    Price = GetEffectivePrice(i.Product?.Price ?? 0, i.SelectedGender),
+                    Price = GetEffectivePrice(i.Product, i.SelectedGender),
                     Quantity = i.Quantity,
                     ImageUrl = i.Product?.ImageUrl ?? string.Empty,
                     SelectedGender = i.SelectedGender
                 }).ToList(),
                 TotalAmount = cart.Items.Sum(i =>
-                    GetEffectivePrice(i.Product?.Price ?? 0, i.SelectedGender) * i.Quantity),
+                    GetEffectivePrice(i.Product, i.SelectedGender) * i.Quantity),
                 TotalItems = cart.Items.Sum(i => i.Quantity)
             };
         }

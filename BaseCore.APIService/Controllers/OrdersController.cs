@@ -30,6 +30,54 @@ namespace BaseCore.APIService.Controllers
             ?? User.FindFirst("sub")?.Value
             ?? User.FindFirst("id")?.Value;
 
+        // Auto-cancel đơn nếu quá 24h chưa thanh toán
+        private async Task CheckAndAutoCancelOrder(Order order)
+        {
+            if (order.Status == "WaitingDeposit")
+            {
+                var hoursElapsed = (DateTime.UtcNow - order.OrderDate).TotalHours;
+                if (hoursElapsed > 24)
+                {
+                    // Hoàn lại stock
+                    var details = await _orderDetailRepository.GetByOrderAsync(order.Id);
+                    foreach (var detail in details)
+                    {
+                        var product = await _productRepository.GetByIdAsync(detail.ProductId);
+                        if (product == null) continue;
+
+                        bool isGenderProduct = product.MaleStock > 0 || product.FemaleStock > 0
+                            || !string.IsNullOrEmpty(detail.SelectedGender);
+                        if (isGenderProduct)
+                        {
+                            switch (detail.SelectedGender)
+                            {
+                                case "Đực":
+                                    product.MaleStock += detail.Quantity;
+                                    break;
+                                case "Cái":
+                                    product.FemaleStock += detail.Quantity;
+                                    break;
+                                case "Cặp":
+                                    product.MaleStock += detail.Quantity;
+                                    product.FemaleStock += detail.Quantity;
+                                    break;
+                            }
+                            product.Stock = product.MaleStock + product.FemaleStock;
+                        }
+                        else
+                        {
+                            product.Stock += detail.Quantity;
+                        }
+                        await _productRepository.UpdateAsync(product);
+                    }
+
+                    // Auto cancel
+                    order.Status = "Cancelled";
+                    await _orderRepository.UpdateAsync(order);
+                }
+            }
+        }
+
         // Lấy đơn hàng của user hiện tại — kèm sản phẩm đã đặt
         [HttpGet]
         public async Task<IActionResult> GetMyOrders()
@@ -38,6 +86,12 @@ namespace BaseCore.APIService.Controllers
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
             var orders = await _orderRepository.GetByUserAsync(userId);
+
+            // Auto-cancel các đơn quá 24h
+            foreach (var order in orders)
+            {
+                await CheckAndAutoCancelOrder(order);
+            }
 
             var result = new List<object>();
             foreach (var o in orders)
@@ -86,6 +140,9 @@ namespace BaseCore.APIService.Controllers
         {
             var order = await _orderRepository.GetByIdAsync(id);
             if (order == null) return NotFound(new { message = "Order not found" });
+
+            // Auto-cancel nếu quá 24h
+            await CheckAndAutoCancelOrder(order);
 
             var details = await _orderDetailRepository.GetByOrderAsync(id);
             return Ok(new { order, details });
@@ -165,7 +222,7 @@ namespace BaseCore.APIService.Controllers
             return Ok(order);
         }
 
-        // Huỷ đơn — chỉ khi đang WaitingDeposit và trong vòng 3 giờ
+        // Huỷ đơn — chỉ khi đang WaitingDeposit (chưa thanh toán)
         [HttpPut("{id}/cancel")]
         public async Task<IActionResult> CancelOrder(int id)
         {
@@ -176,11 +233,7 @@ namespace BaseCore.APIService.Controllers
                 return BadRequest(new { message = "Đơn hàng đã được huỷ trước đó" });
 
             if (order.Status != "WaitingDeposit")
-                return BadRequest(new { message = "Chỉ có thể huỷ đơn khi đang chờ đặt cọc" });
-
-            var hoursElapsed = (DateTime.UtcNow - order.OrderDate).TotalHours;
-            if (hoursElapsed > 3)
-                return BadRequest(new { message = "Đã quá 3 giờ kể từ khi đặt hàng, không thể huỷ đơn" });
+                return BadRequest(new { message = "Chỉ có thể huỷ đơn khi chưa thanh toán" });
 
             // Hoàn lại stock
             var details = await _orderDetailRepository.GetByOrderAsync(id);

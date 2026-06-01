@@ -198,10 +198,9 @@ export default function OrderHistory() {
                               💳 Thanh toán
                             </button>
                           )}
-                          {order.status === 'WaitingDeposit' &&
-                            (Date.now() - new Date(order.orderDate).getTime()) < 3 * 60 * 60 * 1000 && (
+                          {order.status === 'WaitingDeposit' && (
                               <button onClick={() => handleCancelOrder(order.id)} className={styles.btnCancel}>
-                                Hủy đơn
+                                ✕ Hủy đơn
                               </button>
                             )}
                           {canReview && (

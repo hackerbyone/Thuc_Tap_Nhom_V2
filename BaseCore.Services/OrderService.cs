@@ -48,7 +48,7 @@ namespace BaseCore.Services
                 .FirstOrDefaultAsync(o => o.Id == id);
         }
 
-        public async Task<OrderResultDto> CheckoutAsync(string userId, string shippingAddress, string customerName = "", string customerPhone = "")
+        public async Task<OrderResultDto> CheckoutAsync(string userId, string shippingAddress, string customerName = "", string customerPhone = "", decimal shippingFee = 0)
         {
             var cart = await _cartRepository.GetCartByUserId(userId);
             if (cart == null || !cart.Items.Any())
@@ -84,13 +84,15 @@ namespace BaseCore.Services
             }
 
             // 1 cặp = 2 con → giá nhân đôi
-            decimal totalAmount = cart.Items.Sum(item =>
+            decimal productTotal = cart.Items.Sum(item =>
             {
                 var p = _context.Products.Local.FirstOrDefault(x => x.Id == item.ProductId);
                 decimal unitPrice = item.SelectedGender == "Cặp" ? (p?.Price ?? 0) * 2 : (p?.Price ?? 0);
                 return unitPrice * item.Quantity;
             });
 
+            // Cộng phí vận chuyển vào tổng cộng
+            decimal totalAmount = productTotal + shippingFee;
             decimal depositAmount = Math.Round(totalAmount * 0.5m, 0);
 
             var order = new Order
