@@ -6,6 +6,7 @@ using BaseCore.Repository;
 using BaseCore.Repository.EFCore;
 using System.Text;
 using BaseCore.Services;
+using BaseCore.APIService.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -74,6 +75,8 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IVnPayService, VnPayService>();
 
 builder.Services.AddDbContext<MySqlDbContext>(options =>
 {

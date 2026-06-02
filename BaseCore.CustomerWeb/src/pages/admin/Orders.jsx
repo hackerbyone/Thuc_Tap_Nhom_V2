@@ -74,10 +74,20 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
 }
 
 export default function Orders() {
+  const now = new Date();
+  const YEARS = [];
+  for (let y = 2024; y <= now.getFullYear() + 1; y++) YEARS.push(y);
+
   const [orders, setOrders]         = useState([]);
   const [loading, setLoading]       = useState(true);
   const [filterStatus, setFilter]   = useState('');
   const [keyword, setKeyword]       = useState('');
+  const [fromDay, setFromDay]       = useState('');
+  const [fromMonth, setFromMonth]   = useState('');
+  const [fromYear, setFromYear]     = useState('');
+  const [toDay, setToDay]           = useState('');
+  const [toMonth, setToMonth]       = useState('');
+  const [toYear, setToYear]         = useState('');
   const [selected, setSelected]     = useState(null);
   const [detail, setDetail]         = useState(null);
   const [detailLoading, setDL]      = useState(false);
@@ -166,7 +176,23 @@ export default function Orders() {
     const matchKeyword = keyword
       ? String(o.id).includes(keyword) || (o.shippingAddress || '').toLowerCase().includes(keyword.toLowerCase())
       : true;
-    return matchStatus && matchKeyword;
+    const orderDate = new Date(o.orderDate);
+    let matchFrom = true;
+    if (fromYear || fromMonth || fromDay) {
+      const y = parseInt(fromYear) || 2024;
+      const m = parseInt(fromMonth) || 1;
+      const d = parseInt(fromDay) || 1;
+      matchFrom = orderDate >= new Date(y, m - 1, d, 0, 0, 0);
+    }
+    let matchTo = true;
+    if (toYear || toMonth || toDay) {
+      const y = parseInt(toYear) || now.getFullYear();
+      const m = parseInt(toMonth) || 12;
+      const dInMonth = new Date(y, m, 0).getDate();
+      const d = parseInt(toDay) || dInMonth;
+      matchTo = orderDate <= new Date(y, m - 1, d, 23, 59, 59);
+    }
+    return matchStatus && matchKeyword && matchFrom && matchTo;
   });
 
   const countBy = (s) => orders.filter(o => o.status === s).length;
@@ -220,8 +246,9 @@ export default function Orders() {
 
           <div className="card">
             <div className="card-header">
-              <div className="row align-items-center">
-                <div className="col-md-4">
+              {/* Hàng 1: tìm kiếm + trạng thái */}
+              <div className="row align-items-center mb-2">
+                <div className="col-md-5">
                   <div className="input-group">
                     <input
                       type="text"
@@ -235,7 +262,7 @@ export default function Orders() {
                     </div>
                   </div>
                 </div>
-                <div className="col-md-3">
+                <div className="col-md-4">
                   <select className="form-control" value={filterStatus} onChange={e => setFilter(e.target.value)}>
                     <option value="">-- Tất cả trạng thái --</option>
                     {STATUS_LIST.map(s => (
@@ -243,13 +270,77 @@ export default function Orders() {
                     ))}
                   </select>
                 </div>
-                <div className="col-md-2">
-                  <button className="btn btn-secondary" onClick={() => { setFilter(''); setKeyword(''); }}>
-                    <i className="fas fa-redo mr-1"></i> Reset
-                  </button>
-                </div>
                 <div className="col-md-3 text-right">
                   <span className="text-muted">Tổng: <strong>{filtered.length}</strong> đơn</span>
+                </div>
+              </div>
+
+              {/* Hàng 2: lọc theo ngày */}
+              <div className="row align-items-center">
+                <div className="col-auto">
+                  <small className="text-muted font-weight-bold">Lọc theo ngày:</small>
+                </div>
+                <div className="col-auto">
+                  <small className="text-muted mr-1">Từ</small>
+                </div>
+                <div className="col-auto px-1">
+                  <select className="form-control form-control-sm" style={{ width: 75 }} value={fromDay} onChange={e => setFromDay(e.target.value)}>
+                    <option value="">Ngày</option>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                      <option key={d} value={d}>Ngày {d}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-auto px-1">
+                  <select className="form-control form-control-sm" style={{ width: 100 }} value={fromMonth} onChange={e => setFromMonth(e.target.value)}>
+                    <option value="">Tháng</option>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                      <option key={m} value={m}>Tháng {m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-auto px-1">
+                  <select className="form-control form-control-sm" style={{ width: 85 }} value={fromYear} onChange={e => setFromYear(e.target.value)}>
+                    <option value="">Năm</option>
+                    {YEARS.map(y => <option key={y} value={y}>Năm {y}</option>)}
+                  </select>
+                </div>
+
+                <div className="col-auto px-2">
+                  <small className="text-muted">đến</small>
+                </div>
+
+                <div className="col-auto px-1">
+                  <select className="form-control form-control-sm" style={{ width: 75 }} value={toDay} onChange={e => setToDay(e.target.value)}>
+                    <option value="">Ngày</option>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                      <option key={d} value={d}>Ngày {d}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-auto px-1">
+                  <select className="form-control form-control-sm" style={{ width: 100 }} value={toMonth} onChange={e => setToMonth(e.target.value)}>
+                    <option value="">Tháng</option>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                      <option key={m} value={m}>Tháng {m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-auto px-1">
+                  <select className="form-control form-control-sm" style={{ width: 85 }} value={toYear} onChange={e => setToYear(e.target.value)}>
+                    <option value="">Năm</option>
+                    {YEARS.map(y => <option key={y} value={y}>Năm {y}</option>)}
+                  </select>
+                </div>
+
+                <div className="col-auto ml-2">
+                  <button className="btn btn-secondary btn-sm" onClick={() => {
+                    setFilter(''); setKeyword('');
+                    setFromDay(''); setFromMonth(''); setFromYear('');
+                    setToDay(''); setToMonth(''); setToYear('');
+                  }}>
+                    <i className="fas fa-redo mr-1"></i>Đặt lại
+                  </button>
                 </div>
               </div>
             </div>

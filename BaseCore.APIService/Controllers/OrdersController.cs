@@ -2,7 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BaseCore.Entities;
 using BaseCore.Repository.EFCore;
+using BaseCore.APIService.Services;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using BaseCore.Repository;
 
 namespace BaseCore.APIService.Controllers
 {
@@ -14,15 +17,21 @@ namespace BaseCore.APIService.Controllers
         private readonly IOrderRepositoryEF _orderRepository;
         private readonly IOrderDetailRepositoryEF _orderDetailRepository;
         private readonly IProductRepositoryEF _productRepository;
+        private readonly IEmailService _emailService;
+        private readonly MySqlDbContext _db;
 
         public OrdersController(
             IOrderRepositoryEF orderRepository,
             IOrderDetailRepositoryEF orderDetailRepository,
-            IProductRepositoryEF productRepository)
+            IProductRepositoryEF productRepository,
+            IEmailService emailService,
+            MySqlDbContext db)
         {
             _orderRepository = orderRepository;
             _orderDetailRepository = orderDetailRepository;
             _productRepository = productRepository;
+            _emailService = emailService;
+            _db = db;
         }
 
         private string? GetUserId() =>
@@ -195,6 +204,22 @@ namespace BaseCore.APIService.Controllers
                 await _orderDetailRepository.AddAsync(detail);
             }
 
+            // Gửi email xác nhận (fire-and-forget)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                    if (user?.Email != null)
+                    {
+                        await _emailService.SendOrderConfirmationAsync(
+                            user.Email, order.CustomerName, order.Id,
+                            order.DepositAmount, order.TotalAmount, order.ShippingAddress);
+                    }
+                }
+                catch { /* silent — email không được block luồng chính */ }
+            });
+
             return CreatedAtAction(nameof(GetById), new { id = order.Id },
                 new { order, details = orderDetails });
         }
@@ -219,6 +244,22 @@ namespace BaseCore.APIService.Controllers
 
             order.Status = dto.Status;
             await _orderRepository.UpdateAsync(order);
+
+            // Gửi email thông báo thay đổi trạng thái (fire-and-forget)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == order.UserId);
+                    if (user?.Email != null)
+                    {
+                        await _emailService.SendOrderStatusUpdateAsync(
+                            user.Email, order.CustomerName, order.Id, dto.Status);
+                    }
+                }
+                catch { /* silent */ }
+            });
+
             return Ok(order);
         }
 
