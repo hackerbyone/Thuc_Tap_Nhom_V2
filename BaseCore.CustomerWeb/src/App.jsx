@@ -22,6 +22,7 @@ import AdminCategories from './pages/admin/Categories'
 import AdminBlogs from './pages/admin/Blogs'
 import AdminUsers from './pages/admin/Users'
 import AdminOrders from './pages/admin/Orders'
+import AdminStatistics from './pages/admin/Statistics'
 
 // Guard: chỉ cho vào nếu đã login và là admin
 function AdminRoute({ children }) {
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
             <Route path="/admin/blogs" element={<AdminRoute><AdminBlogs /></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+            <Route path="/admin/statistics" element={<AdminRoute><AdminStatistics /></AdminRoute>} />
             <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -120,6 +120,11 @@ using (var scope = app.Services.CreateScope())
     try
     {
         db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='Products' AND COLUMN_NAME='PairPrice')
+                ALTER TABLE Products ADD PairPrice decimal(18,2) NULL;
+        ");
+
+        db.Database.ExecuteSqlRaw(@"
             IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='Orders' AND COLUMN_NAME='DepositAmount')
                 ALTER TABLE Orders ADD DepositAmount decimal(18,2) NOT NULL DEFAULT 0;
         ");

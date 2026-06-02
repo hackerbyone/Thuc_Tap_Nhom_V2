@@ -109,6 +109,12 @@ export default function AdminLayout({ children }) {
                   <p>Người dùng</p>
                 </Link>
               </li>
+              <li className="nav-item">
+                <Link to="/admin/statistics" className={isActive('/admin/statistics')}>
+                  <i className="nav-icon fas fa-chart-bar"></i>
+                  <p>Thống kê</p>
+                </Link>
+              </li>
               {/* FIX 4: Nút về cửa hàng nổi bật */}
               <li className="nav-item mt-3">
                 <Link to="/" className="nav-link" style={{ background: 'rgba(168,213,240,0.15)', borderRadius: 6 }}>

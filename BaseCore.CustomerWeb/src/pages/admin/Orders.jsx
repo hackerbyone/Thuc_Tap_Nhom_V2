@@ -300,31 +300,17 @@ export default function Orders() {
                               <button className="btn btn-sm btn-outline-primary mr-1" onClick={() => openDetail(order)} title="Xem chi tiết">
                                 <i className="fas fa-eye"></i>
                               </button>
-                              {/* Xác nhận đã nhận cọc */}
-                              {order.status === 'WaitingDeposit' && (
-                                <button className="btn btn-sm btn-primary mr-1" onClick={() => handleUpdateStatus(order.id, 'DepositPaid')} disabled={updating} title="Xác nhận đã đặt cọc">
-                                  <i className="fas fa-money-bill-wave"></i>
-                                </button>
-                              )}
-                              {/* Chuyển sang Đang xử lý */}
-                              {order.status === 'DepositPaid' && (
-                                <button className="btn btn-sm btn-info mr-1" onClick={() => handleUpdateStatus(order.id, 'Processing')} disabled={updating} title="Bắt đầu xử lý">
-                                  <i className="fas fa-cog"></i>
-                                </button>
-                              )}
-                              {/* Giao hàng */}
-                              {order.status === 'Processing' && (
-                                <button className="btn btn-sm btn-info mr-1" onClick={() => handleUpdateStatus(order.id, 'Shipping')} disabled={updating} title="Giao hàng">
-                                  <i className="fas fa-truck"></i>
-                                </button>
-                              )}
-                              {/* Hoàn thành */}
-                              {order.status === 'Shipping' && (
-                                <button className="btn btn-sm btn-success mr-1" onClick={() => handleUpdateStatus(order.id, 'Completed')} disabled={updating} title="Đã giao xong">
-                                  <i className="fas fa-check"></i>
-                                </button>
-                              )}
-                              {/* Hủy đơn — chỉ khi chưa giao */}
+                              <select
+                                className="form-control form-control-sm d-inline-block mr-1"
+                                value={order.status}
+                                onChange={e => handleUpdateStatus(order.id, e.target.value)}
+                                disabled={updating || order.status === 'Completed' || order.status === 'Cancelled'}
+                                style={{ width: 140, verticalAlign: 'middle' }}
+                              >
+                                {STATUS_LIST.map(s => (
+                                  <option key={s.value} value={s.value}>{s.label}</option>
+                                ))}
+                              </select>
                               {['WaitingDeposit', 'DepositPaid', 'Processing'].includes(order.status) && (
                                 <button className="btn btn-sm btn-danger" onClick={() => handleCancel(order.id)} disabled={updating} title="Hủy đơn">
                                   <i className="fas fa-times"></i>
@@ -452,37 +438,35 @@ export default function Orders() {
                         </tfoot>
                       </table>
 
-                      {/* Flow trạng thái */}
+                      {/* Cập nhật trạng thái */}
                       <div className="mt-3">
                         <strong>Cập nhật trạng thái:</strong>
-                        <div className="mt-2 d-flex flex-wrap" style={{ gap: 6 }}>
-                          {selected.status === 'WaitingDeposit' && (
-                            <button className="btn btn-sm btn-primary" onClick={() => handleUpdateStatus(selected.id, 'DepositPaid')} disabled={updating}>
-                              <i className="fas fa-money-bill-wave mr-1"></i> Xác nhận đã đặt cọc
-                            </button>
-                          )}
-                          {selected.status === 'DepositPaid' && (
-                            <button className="btn btn-sm btn-info" onClick={() => handleUpdateStatus(selected.id, 'Processing')} disabled={updating}>
-                              <i className="fas fa-cog mr-1"></i> Bắt đầu xử lý
-                            </button>
-                          )}
-                          {selected.status === 'Processing' && (
-                            <button className="btn btn-sm btn-info" onClick={() => handleUpdateStatus(selected.id, 'Shipping')} disabled={updating}>
-                              <i className="fas fa-truck mr-1"></i> Giao hàng
-                            </button>
-                          )}
-                          {selected.status === 'Shipping' && (
-                            <button className="btn btn-sm btn-success" onClick={() => handleUpdateStatus(selected.id, 'Completed')} disabled={updating}>
-                              <i className="fas fa-check mr-1"></i> Đã giao xong
-                            </button>
-                          )}
-                          {['WaitingDeposit', 'DepositPaid', 'Processing'].includes(selected.status) && (
-                            <button className="btn btn-sm btn-danger" onClick={() => handleCancel(selected.id)} disabled={updating}>
-                              <i className="fas fa-times mr-1"></i> Hủy đơn
-                            </button>
-                          )}
-                          {['Completed', 'Cancelled'].includes(selected.status) && (
-                            <span className="text-muted small mt-1">Đơn hàng đã {selected.status === 'Completed' ? 'hoàn thành' : 'bị hủy'}</span>
+                        <div className="mt-2 d-flex align-items-center flex-wrap" style={{ gap: 8 }}>
+                          {['Completed', 'Cancelled'].includes(selected.status) ? (
+                            <span className="text-muted small">
+                              <i className="fas fa-lock mr-1"></i>
+                              Đơn hàng đã {selected.status === 'Completed' ? 'hoàn thành' : 'bị hủy'}, không thể thay đổi
+                            </span>
+                          ) : (
+                            <>
+                              <select
+                                className="form-control form-control-sm"
+                                value={selected.status}
+                                onChange={e => handleUpdateStatus(selected.id, e.target.value)}
+                                disabled={updating}
+                                style={{ width: 200 }}
+                              >
+                                {STATUS_LIST.map(s => (
+                                  <option key={s.value} value={s.value}>{s.label}</option>
+                                ))}
+                              </select>
+                              {['WaitingDeposit', 'DepositPaid', 'Processing'].includes(selected.status) && (
+                                <button className="btn btn-sm btn-danger" onClick={() => handleCancel(selected.id)} disabled={updating}>
+                                  <i className="fas fa-times mr-1"></i> Hủy đơn
+                                </button>
+                              )}
+                              {updating && <div className="spinner-border spinner-border-sm text-primary" role="status"></div>}
+                            </>
                           )}
                         </div>
                       </div>

@@ -87,7 +87,7 @@ namespace BaseCore.Services
             decimal productTotal = cart.Items.Sum(item =>
             {
                 var p = _context.Products.Local.FirstOrDefault(x => x.Id == item.ProductId);
-                decimal unitPrice = item.SelectedGender == "Cặp" ? (p?.Price ?? 0) * 2 : (p?.Price ?? 0);
+                decimal unitPrice = item.SelectedGender == "Cặp" ? (p?.PairPrice ?? (p?.Price ?? 0) * 2) : (p?.Price ?? 0);
                 return unitPrice * item.Quantity;
             });
 
@@ -118,7 +118,7 @@ namespace BaseCore.Services
                 if (product == null) continue;
 
                 // Cặp = 2 con → lưu UnitPrice là giá 1 cặp (= 2 × giá đơn)
-                decimal unitPrice = item.SelectedGender == "Cặp" ? product.Price * 2 : product.Price;
+                decimal unitPrice = item.SelectedGender == "Cặp" ? (product.PairPrice ?? product.Price * 2) : product.Price;
 
                 await _context.Set<OrderDetail>().AddAsync(new OrderDetail
                 {

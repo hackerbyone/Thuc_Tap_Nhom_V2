@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { cartService } from '../services/cart/cartService'
+import { PROVINCES } from '../data/vietnamAddress'
 import styles from './Cart.module.css'
 
 function formatPrice(n) { return n.toLocaleString('vi-VN') + 'đ' }
@@ -15,9 +16,11 @@ export default function Cart() {
   const [checkoutStep, setCheckoutStep] = useState(1)   // 1 = nhập thông tin, 2 = xác nhận cọc
   const [checkoutResult, setCheckoutResult] = useState(null) // kết quả từ backend
   const [checkoutData, setCheckoutData] = useState({
-    shippingAddress: '',
     customerName: '',
     customerPhone: '',
+    province: '',
+    district: '',
+    streetAddress: '',
   })
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState(null)
@@ -35,6 +38,12 @@ export default function Cart() {
   const handleClearName = () => {
     setCheckoutData(prev => ({ ...prev, customerName: '' }))
   }
+
+  const handleProvinceChange = (value) => {
+    setCheckoutData(prev => ({ ...prev, province: value, district: '' }))
+  }
+
+  const selectedProvince = PROVINCES.find(p => p.name === checkoutData.province)
 
   const shipping = total >= 500000 ? 0 : 35000
   const grandTotal = total + shipping
@@ -58,16 +67,18 @@ export default function Cart() {
   }
 
   const handleCheckout = async () => {
-    if (!checkoutData.shippingAddress.trim() || !checkoutData.customerName.trim() || !checkoutData.customerPhone.trim()) {
-      setCheckoutError('Vui lòng điền đầy đủ thông tin')
+    if (!checkoutData.customerName.trim() || !checkoutData.customerPhone.trim() ||
+        !checkoutData.province || !checkoutData.district || !checkoutData.streetAddress.trim()) {
+      setCheckoutError('Vui lòng điền đầy đủ thông tin giao hàng')
       return
     }
 
     try {
       setCheckoutLoading(true)
       setCheckoutError(null)
+      const fullAddress = `${checkoutData.streetAddress}, ${checkoutData.district}, ${checkoutData.province}`
       const result = await cartService.checkout(
-        checkoutData.shippingAddress,
+        fullAddress,
         'Standard',
         'COD',
         checkoutData.customerName,
@@ -280,12 +291,41 @@ export default function Cart() {
                   </div>
 
                   <div className={styles.formGroup}>
-                    <label>Địa chỉ giao hàng *</label>
-                    <textarea
-                      placeholder="Nhập địa chỉ giao hàng"
-                      rows="3"
-                      value={checkoutData.shippingAddress}
-                      onChange={e => handleCheckoutChange('shippingAddress', e.target.value)}
+                    <label>Tỉnh / Thành phố *</label>
+                    <select
+                      value={checkoutData.province}
+                      onChange={e => handleProvinceChange(e.target.value)}
+                      style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: 8, border: '1.5px solid #e0e0e0', fontSize: '0.95rem', background: '#fff' }}
+                    >
+                      <option value="">-- Chọn Tỉnh / Thành phố --</option>
+                      {PROVINCES.map(p => (
+                        <option key={p.name} value={p.name}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Quận / Huyện *</label>
+                    <select
+                      value={checkoutData.district}
+                      onChange={e => handleCheckoutChange('district', e.target.value)}
+                      disabled={!checkoutData.province}
+                      style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: 8, border: '1.5px solid #e0e0e0', fontSize: '0.95rem', background: checkoutData.province ? '#fff' : '#f5f5f5' }}
+                    >
+                      <option value="">-- Chọn Quận / Huyện --</option>
+                      {selectedProvince?.districts.map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Số nhà, tên đường, phường/xã *</label>
+                    <input
+                      type="text"
+                      placeholder="VD: 123 Nguyễn Huệ, P. Bến Nghé"
+                      value={checkoutData.streetAddress}
+                      onChange={e => handleCheckoutChange('streetAddress', e.target.value)}
                     />
                   </div>
 

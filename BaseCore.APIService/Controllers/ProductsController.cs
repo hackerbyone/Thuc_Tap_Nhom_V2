@@ -45,7 +45,7 @@ namespace BaseCore.APIService.Controllers
 
         private static object ToDto(Product p, double rating, int reviews) => new
         {
-            p.Id, p.Name, p.Price, p.Stock,
+            p.Id, p.Name, p.Price, p.PairPrice, p.Stock,
             p.ImageUrl, p.Description, p.CareInstructions, p.Environment,
             p.MaleStock, p.FemaleStock, p.CategoryId,
             rating, reviews
@@ -142,6 +142,7 @@ namespace BaseCore.APIService.Controllers
             {
                 Name = dto.Name,
                 Price = dto.Price,
+                PairPrice = dto.PairPrice,
                 Stock = finalStock,
                 CategoryId = dto.CategoryId,
                 Description = dto.Description,
@@ -190,6 +191,7 @@ namespace BaseCore.APIService.Controllers
 
             product.Name = dto.Name ?? product.Name;
             product.Price = dto.Price ?? product.Price;
+            product.PairPrice = dto.PairPrice ?? product.PairPrice;
             product.CategoryId = dto.CategoryId ?? product.CategoryId;
             product.Description = dto.Description ?? product.Description;
             product.CareInstructions = dto.CareInstructions ?? product.CareInstructions;
@@ -238,6 +240,7 @@ namespace BaseCore.APIService.Controllers
     {
         public string Name { get; set; } = "";
         public decimal Price { get; set; }
+        public decimal? PairPrice { get; set; }
         public int Stock { get; set; }
         public int CategoryId { get; set; }
         public string? Description { get; set; }
@@ -252,6 +255,7 @@ namespace BaseCore.APIService.Controllers
     {
         public string? Name { get; set; }
         public decimal? Price { get; set; }
+        public decimal? PairPrice { get; set; }
         public int? Stock { get; set; }
         public int? CategoryId { get; set; }
         public string? Description { get; set; }
