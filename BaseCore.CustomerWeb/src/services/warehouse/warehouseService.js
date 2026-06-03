@@ -106,4 +106,13 @@ export const warehouseService = {
     const res = await fetch(buildUrl('/api/warehouse/commits', params), { headers: getHeaders(true) });
     return handleResponse(res, 'Không thể tải lịch sử commit');
   },
+
+  // Báo cáo hao hụt
+  getLossReport: async (from = '', to = '', groupBy = 'month') => {
+    const params = { groupBy };
+    if (from) params.from = from;
+    if (to)   params.to   = to;
+    const res = await fetch(buildUrl('/api/warehouse/report', params), { headers: getHeaders() });
+    return handleResponse(res, 'Không thể tải báo cáo hao hụt');
+  },
 };

@@ -80,13 +80,12 @@ namespace BaseCore.APIService.Controllers
 
             var tankName = product.Name ?? $"Loài #{product.Id}";
 
-            // Upsert: nếu đã có bể cho loài này thì cập nhật, không tạo mới
             var existing = await _context.TankFishTrackings
                 .FirstOrDefaultAsync(t => t.ProductId == req.ProductId);
 
             if (existing != null)
             {
-                var oldValue = JsonSerializer.Serialize(new { existing.MaleCount, existing.FemaleCount });
+                var oldValue = JsonSerializer.Serialize(new { maleCount = existing.MaleCount, femaleCount = existing.FemaleCount });
                 existing.TankName          = tankName;
                 existing.MaleCount         += req.MaleCount;
                 existing.FemaleCount       += req.FemaleCount;
@@ -100,7 +99,7 @@ namespace BaseCore.APIService.Controllers
                     req.CommitMessage ?? $"Nhập thêm vào bể {tankName}: +{req.MaleCount} đực, +{req.FemaleCount} cái",
                     "Fish", existing.Id, tankName,
                     oldValue,
-                    JsonSerializer.Serialize(new { existing.MaleCount, existing.FemaleCount }));
+                    JsonSerializer.Serialize(new { maleCount = existing.MaleCount, femaleCount = existing.FemaleCount }));
 
                 return Ok(new { existing.Id, message = $"Đã cộng thêm {req.MaleCount} đực + {req.FemaleCount} cái vào bể {tankName}.", updated = true });
             }
@@ -123,7 +122,7 @@ namespace BaseCore.APIService.Controllers
                 req.CommitMessage ?? $"Tạo bể mới: {tankName}",
                 "Fish", tank.Id, tankName,
                 null,
-                JsonSerializer.Serialize(new { req.MaleCount, req.FemaleCount }));
+                JsonSerializer.Serialize(new { maleCount = req.MaleCount, femaleCount = req.FemaleCount }));
 
             return Ok(new { tank.Id, message = "Tạo bể thành công.", updated = false });
         }
@@ -134,9 +133,8 @@ namespace BaseCore.APIService.Controllers
             var tank = await _context.TankFishTrackings.FindAsync(id);
             if (tank == null) return NotFound(new { message = "Không tìm thấy bể cá" });
 
-            var oldValue = JsonSerializer.Serialize(new { tank.MaleCount, tank.FemaleCount, tank.Notes });
+            var oldValue = JsonSerializer.Serialize(new { maleCount = tank.MaleCount, femaleCount = tank.FemaleCount, notes = tank.Notes });
 
-            // Nếu đổi loài cá thì cập nhật TankName theo tên loài mới
             if (req.ProductId > 0 && req.ProductId != tank.ProductId)
             {
                 var product = await _context.Products.FindAsync(req.ProductId);
@@ -158,7 +156,7 @@ namespace BaseCore.APIService.Controllers
                 req.CommitMessage ?? $"Cập nhật bể: {tank.TankName}",
                 "Fish", tank.Id, tank.TankName,
                 oldValue,
-                JsonSerializer.Serialize(new { req.MaleCount, req.FemaleCount, req.Notes }));
+                JsonSerializer.Serialize(new { maleCount = req.MaleCount, femaleCount = req.FemaleCount, notes = req.Notes }));
 
             return Ok(new { message = "Cập nhật thành công" });
         }
@@ -172,7 +170,7 @@ namespace BaseCore.APIService.Controllers
             await AddCommit(staffId, staffName,
                 $"Xoá bể: {tank.TankName}",
                 "Fish", tank.Id, tank.TankName,
-                JsonSerializer.Serialize(new { tank.MaleCount, tank.FemaleCount }),
+                JsonSerializer.Serialize(new { maleCount = tank.MaleCount, femaleCount = tank.FemaleCount }),
                 null);
 
             _context.TankFishTrackings.Remove(tank);
@@ -212,7 +210,6 @@ namespace BaseCore.APIService.Controllers
         [HttpPost("accessories")]
         public async Task<IActionResult> CreateAccessory([FromBody] AccessoryRequest req)
         {
-            // Nếu có ProductId → upsert: cộng dồn số lượng vào bản ghi hiện có
             if (req.ProductId.HasValue)
             {
                 var product = await _context.Products.FindAsync(req.ProductId.Value);
@@ -226,10 +223,10 @@ namespace BaseCore.APIService.Controllers
 
                 if (existing != null)
                 {
-                    var oldValue = JsonSerializer.Serialize(new { existing.Quantity, existing.Status });
+                    var oldValue = JsonSerializer.Serialize(new { quantity = existing.Quantity, status = existing.Status });
                     existing.Name     = accName;
                     existing.Quantity += req.Quantity;
-                    existing.Status   = req.Status ?? existing.Status;
+                    // Khi nhập thêm hàng tốt, không thay đổi trạng thái hiện tại
                     if (!string.IsNullOrWhiteSpace(req.Description)) existing.Description = req.Description;
                     existing.Modified = DateTime.Now;
                     await _context.SaveChangesAsync();
@@ -238,7 +235,7 @@ namespace BaseCore.APIService.Controllers
                         req.CommitMessage ?? $"Nhập thêm {(accType == "Equipment" ? "thiết bị" : "phụ kiện")} {accName}: +{req.Quantity}",
                         "Accessory", existing.Id, accName,
                         oldValue,
-                        JsonSerializer.Serialize(new { existing.Quantity, existing.Status }));
+                        JsonSerializer.Serialize(new { quantity = existing.Quantity, status = existing.Status }));
 
                     return Ok(new { existing.Id, message = $"Đã cộng thêm {req.Quantity} vào {accName}.", updated = true });
                 }
@@ -250,7 +247,7 @@ namespace BaseCore.APIService.Controllers
                     Type          = accType,
                     Quantity      = req.Quantity,
                     Unit          = req.Unit,
-                    Status        = req.Status ?? "Good",
+                    Status        = "Good",
                     Description   = req.Description,
                     IsActive      = true,
                     Created       = DateTime.Now,
@@ -263,12 +260,11 @@ namespace BaseCore.APIService.Controllers
                 await AddCommit(req.StaffId, req.StaffName,
                     req.CommitMessage ?? $"Thêm {(accType == "Equipment" ? "thiết bị" : "phụ kiện")}: {accName}",
                     "Accessory", newAcc.Id, accName, null,
-                    JsonSerializer.Serialize(new { req.Quantity, newAcc.Status }));
+                    JsonSerializer.Serialize(new { quantity = req.Quantity, status = newAcc.Status }));
 
                 return Ok(new { newAcc.Id, message = "Tạo thành công.", updated = false });
             }
 
-            // Không có ProductId → tạo mới thủ công (cho phép tên trùng)
             if (string.IsNullOrWhiteSpace(req.Name))
                 return BadRequest(new { message = "Tên phụ kiện không được để trống" });
 
@@ -278,7 +274,7 @@ namespace BaseCore.APIService.Controllers
                 Type          = req.Type ?? "Accessory",
                 Quantity      = req.Quantity,
                 Unit          = req.Unit,
-                Status        = req.Status ?? "Good",
+                Status        = "Good",
                 Description   = req.Description,
                 IsActive      = true,
                 Created       = DateTime.Now,
@@ -291,7 +287,7 @@ namespace BaseCore.APIService.Controllers
             await AddCommit(req.StaffId, req.StaffName,
                 req.CommitMessage ?? $"Thêm {(req.Type == "Equipment" ? "thiết bị" : "phụ kiện")}: {req.Name}",
                 "Accessory", accessory.Id, req.Name, null,
-                JsonSerializer.Serialize(new { req.Quantity, req.Status }));
+                JsonSerializer.Serialize(new { quantity = req.Quantity, status = "Good" }));
 
             return Ok(new { accessory.Id, message = "Tạo thành công.", updated = false });
         }
@@ -302,7 +298,7 @@ namespace BaseCore.APIService.Controllers
             var accessory = await _context.Accessories.FindAsync(id);
             if (accessory == null) return NotFound(new { message = "Không tìm thấy phụ kiện" });
 
-            var oldValue = JsonSerializer.Serialize(new { accessory.Quantity, accessory.Status });
+            var oldValue = JsonSerializer.Serialize(new { quantity = accessory.Quantity, status = accessory.Status });
 
             accessory.Name        = req.Name ?? accessory.Name;
             accessory.Type        = req.Type ?? accessory.Type;
@@ -318,7 +314,7 @@ namespace BaseCore.APIService.Controllers
                 req.CommitMessage ?? $"Cập nhật {(accessory.Type == "Equipment" ? "thiết bị" : "phụ kiện")}: {accessory.Name}",
                 "Accessory", accessory.Id, accessory.Name,
                 oldValue,
-                JsonSerializer.Serialize(new { req.Quantity, req.Status }));
+                JsonSerializer.Serialize(new { quantity = req.Quantity, status = req.Status }));
 
             return Ok(new { message = "Cập nhật thành công" });
         }
@@ -332,7 +328,7 @@ namespace BaseCore.APIService.Controllers
             await AddCommit(staffId, staffName,
                 $"Xoá {(accessory.Type == "Equipment" ? "thiết bị" : "phụ kiện")}: {accessory.Name}",
                 "Accessory", accessory.Id, accessory.Name,
-                JsonSerializer.Serialize(new { accessory.Quantity, accessory.Status }),
+                JsonSerializer.Serialize(new { quantity = accessory.Quantity, status = accessory.Status }),
                 null);
 
             accessory.IsActive = false;
@@ -359,7 +355,7 @@ namespace BaseCore.APIService.Controllers
             if (string.IsNullOrWhiteSpace(req.Reason))
                 return BadRequest(new { message = "Vui lòng nhập lý do" });
 
-            var oldValue = JsonSerializer.Serialize(new { tank.MaleCount, tank.FemaleCount });
+            var oldValue = JsonSerializer.Serialize(new { maleCount = tank.MaleCount, femaleCount = tank.FemaleCount });
             tank.MaleCount         -= req.MaleLoss;
             tank.FemaleCount       -= req.FemaleLoss;
             tank.LastUpdated       = DateTime.Now;
@@ -371,7 +367,7 @@ namespace BaseCore.APIService.Controllers
                 $"Hao hụt {tank.TankName}: -{req.MaleLoss} đực, -{req.FemaleLoss} cái — {req.Reason}",
                 "Fish", tank.Id, tank.TankName,
                 oldValue,
-                JsonSerializer.Serialize(new { tank.MaleCount, tank.FemaleCount }));
+                JsonSerializer.Serialize(new { maleCount = tank.MaleCount, femaleCount = tank.FemaleCount }));
 
             return Ok(new { message = $"Đã ghi nhận -{req.MaleLoss} đực, -{req.FemaleLoss} cái khỏi bể {tank.TankName}." });
         }
@@ -389,9 +385,9 @@ namespace BaseCore.APIService.Controllers
             if (string.IsNullOrWhiteSpace(req.Reason))
                 return BadRequest(new { message = "Vui lòng nhập lý do" });
 
-            var oldValue = JsonSerializer.Serialize(new { acc.Quantity, acc.Status });
+            var oldValue = JsonSerializer.Serialize(new { quantity = acc.Quantity, status = acc.Status });
             acc.Quantity -= req.QuantityLoss;
-            if (!string.IsNullOrWhiteSpace(req.NewStatus)) acc.Status = req.NewStatus;
+            // Không đổi trạng thái khi ghi nhận hư hỏng — trạng thái chỉ thay đổi qua chức năng Sửa
             acc.Modified = DateTime.Now;
             await _context.SaveChangesAsync();
 
@@ -399,7 +395,7 @@ namespace BaseCore.APIService.Controllers
                 $"Hư hỏng/mất {acc.Name}: -{req.QuantityLoss} — {req.Reason}",
                 "Accessory", acc.Id, acc.Name,
                 oldValue,
-                JsonSerializer.Serialize(new { acc.Quantity, acc.Status }));
+                JsonSerializer.Serialize(new { quantity = acc.Quantity, status = acc.Status }));
 
             return Ok(new { message = $"Đã ghi nhận -{req.QuantityLoss} {acc.Name}." });
         }
@@ -411,9 +407,6 @@ namespace BaseCore.APIService.Controllers
         private static readonly int[] FishCategoryIds      = [1, 2];
         private static readonly int[] AccessoryCategoryIds = [3, 4, 5];
 
-        // Tính MaleCount/FemaleCount từ Product:
-        // - Nếu có gender breakdown → dùng MaleStock/FemaleStock
-        // - Nếu chưa → đặt hết vào MaleCount để TotalCount = Stock
         private static (int male, int female, string? notes) GetTankCounts(Product p)
         {
             if (p.MaleStock > 0 || p.FemaleStock > 0)
@@ -421,22 +414,16 @@ namespace BaseCore.APIService.Controllers
             return (p.Stock, 0, "Chưa phân loại giới tính");
         }
 
-        /// <summary>
-        /// Đồng bộ đầy đủ: tạo bể mới cho cá categories 1,2 chưa có bể
-        /// VÀ cập nhật bể đã tồn tại nếu số lượng lệch với Products.
-        /// </summary>
         [HttpPost("sync")]
         public async Task<IActionResult> SyncFromProducts(
             [FromQuery] string staffId   = "system",
             [FromQuery] string staffName = "Hệ thống")
         {
-            // Lấy tất cả cá (category 1, 2) còn hàng
             var fishProducts = await _context.Products
                 .Where(p => FishCategoryIds.Contains(p.CategoryId)
                          && (p.MaleStock > 0 || p.FemaleStock > 0 || p.Stock > 0))
                 .ToListAsync();
 
-            // Bản đồ ProductId → bể hiện có
             var existingTanks = await _context.TankFishTrackings
                 .Where(t => fishProducts.Select(p => p.Id).Contains(t.ProductId))
                 .ToListAsync();
@@ -451,7 +438,6 @@ namespace BaseCore.APIService.Controllers
 
                 if (!tankMap.TryGetValue(p.Id, out var tank))
                 {
-                    // Tạo mới
                     tank = new TankFishTracking
                     {
                         TankName          = tankName,
@@ -469,13 +455,12 @@ namespace BaseCore.APIService.Controllers
                     await AddCommit(staffId, staffName,
                         $"Đồng bộ kho: tạo bể cho {tankName}",
                         "Fish", tank.Id, tankName, null,
-                        JsonSerializer.Serialize(new { male, female }));
+                        JsonSerializer.Serialize(new { maleCount = male, femaleCount = female }));
                     created++;
                 }
                 else if (tank.MaleCount != male || tank.FemaleCount != female || tank.TankName != tankName)
                 {
-                    // Cập nhật bể đã lệch
-                    var oldValue = JsonSerializer.Serialize(new { tank.MaleCount, tank.FemaleCount });
+                    var oldValue = JsonSerializer.Serialize(new { maleCount = tank.MaleCount, femaleCount = tank.FemaleCount });
                     tank.TankName          = tankName;
                     tank.MaleCount         = male;
                     tank.FemaleCount       = female;
@@ -488,12 +473,11 @@ namespace BaseCore.APIService.Controllers
                     await AddCommit(staffId, staffName,
                         $"Đồng bộ kho: cập nhật bể {tankName}",
                         "Fish", tank.Id, tankName, oldValue,
-                        JsonSerializer.Serialize(new { male, female }));
+                        JsonSerializer.Serialize(new { maleCount = male, femaleCount = female }));
                     updated++;
                 }
             }
 
-            // ── Sync phụ kiện & thiết bị (category 3, 4) ─────────────
             var accProducts = await _context.Products
                 .Where(p => AccessoryCategoryIds.Contains(p.CategoryId) && p.Stock > 0)
                 .ToListAsync();
@@ -529,7 +513,7 @@ namespace BaseCore.APIService.Controllers
                 }
                 else if (acc.Quantity != p.Stock || acc.Name != accName)
                 {
-                    var oldVal = JsonSerializer.Serialize(new { acc.Quantity });
+                    var oldVal = JsonSerializer.Serialize(new { quantity = acc.Quantity, status = acc.Status });
                     acc.Name     = accName;
                     acc.Quantity = p.Stock;
                     acc.Modified = DateTime.Now;
@@ -538,7 +522,7 @@ namespace BaseCore.APIService.Controllers
                     await AddCommit(staffId, staffName,
                         $"Đồng bộ kho: cập nhật {accName}",
                         "Accessory", acc.Id, accName, oldVal,
-                        JsonSerializer.Serialize(new { p.Stock }));
+                        JsonSerializer.Serialize(new { quantity = p.Stock, status = acc.Status }));
                     accUpdated++;
                 }
             }
@@ -552,7 +536,76 @@ namespace BaseCore.APIService.Controllers
         }
 
         // ────────────────────────────────────────────────────────────
-        //  COMMIT LOG (Thông báo nội bộ)
+        //  BÁO CÁO HAO HỤT
+        // ────────────────────────────────────────────────────────────
+
+        [HttpGet("report")]
+        public async Task<IActionResult> GetLossReport(
+            [FromQuery] DateTime? from,
+            [FromQuery] DateTime? to,
+            [FromQuery] string groupBy = "month")
+        {
+            // Chỉ lấy commit ghi nhận hao hụt (tank loss hoặc accessory loss)
+            var q = _context.InventoryCommits
+                .Where(c => c.CommitMessage.StartsWith("Hao hụt") ||
+                            c.CommitMessage.StartsWith("Hư hỏng/mất"));
+
+            if (from.HasValue) q = q.Where(c => c.Created >= from.Value);
+            if (to.HasValue)   q = q.Where(c => c.Created < to.Value.AddDays(1));
+
+            var commits = await q.OrderBy(c => c.Created).ToListAsync();
+
+            var records = commits.Select(c =>
+            {
+                var oldCount = c.TargetType == "Fish"
+                    ? ParseFishTotal(c.OldValue)
+                    : ParseAccQuantity(c.OldValue);
+                var newCount = c.TargetType == "Fish"
+                    ? ParseFishTotal(c.NewValue)
+                    : ParseAccQuantity(c.NewValue);
+                return new
+                {
+                    c.TargetType,
+                    c.TargetName,
+                    c.CommitMessage,
+                    c.StaffName,
+                    c.Created,
+                    LossAmount = Math.Max(0, oldCount - newCount),
+                };
+            }).ToList();
+
+            Func<DateTime, string> periodKey = groupBy == "day"
+                ? d => d.ToString("yyyy-MM-dd")
+                : d => d.ToString("yyyy-MM");
+
+            var periods = records
+                .GroupBy(r => periodKey(r.Created))
+                .Select(g => new
+                {
+                    period       = g.Key,
+                    fishLoss     = g.Where(r => r.TargetType == "Fish").Sum(r => r.LossAmount),
+                    accLoss      = g.Where(r => r.TargetType == "Accessory").Sum(r => r.LossAmount),
+                    records      = g.OrderByDescending(r => r.Created)
+                                    .Select(r => new
+                                    {
+                                        r.TargetType, r.TargetName, r.CommitMessage,
+                                        r.StaffName, r.Created, r.LossAmount
+                                    })
+                })
+                .OrderByDescending(g => g.period)
+                .ToList();
+
+            return Ok(new
+            {
+                periods,
+                totalFishLoss = records.Where(r => r.TargetType == "Fish").Sum(r => r.LossAmount),
+                totalAccLoss  = records.Where(r => r.TargetType == "Accessory").Sum(r => r.LossAmount),
+                totalRecords  = records.Count
+            });
+        }
+
+        // ────────────────────────────────────────────────────────────
+        //  COMMIT LOG
         // ────────────────────────────────────────────────────────────
 
         [HttpGet("commits")]
@@ -580,7 +633,7 @@ namespace BaseCore.APIService.Controllers
         }
 
         // ────────────────────────────────────────────────────────────
-        //  HELPER
+        //  HELPERS
         // ────────────────────────────────────────────────────────────
 
         private async Task AddCommit(string staffId, string staffName, string message,
@@ -600,6 +653,39 @@ namespace BaseCore.APIService.Controllers
                 Created       = DateTime.Now
             });
             await _context.SaveChangesAsync();
+        }
+
+        // Đọc tổng cá (đực + cái) từ JSON — hỗ trợ cả camelCase và PascalCase
+        private static int ParseFishTotal(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return 0;
+            try
+            {
+                var doc  = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                int male = 0, female = 0;
+                if (root.TryGetProperty("maleCount",   out var m) && m.TryGetInt32(out var mi)) male   = mi;
+                else if (root.TryGetProperty("MaleCount", out var M) && M.TryGetInt32(out var Mi)) male = Mi;
+                if (root.TryGetProperty("femaleCount",   out var f) && f.TryGetInt32(out var fi)) female   = fi;
+                else if (root.TryGetProperty("FemaleCount", out var F) && F.TryGetInt32(out var Fi)) female = Fi;
+                return male + female;
+            }
+            catch { return 0; }
+        }
+
+        // Đọc số lượng phụ kiện từ JSON — hỗ trợ cả camelCase và PascalCase
+        private static int ParseAccQuantity(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return 0;
+            try
+            {
+                var doc  = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("quantity", out var q) && q.TryGetInt32(out var qi)) return qi;
+                if (root.TryGetProperty("Quantity", out var Q) && Q.TryGetInt32(out var Qi)) return Qi;
+                return 0;
+            }
+            catch { return 0; }
         }
     }
 
@@ -631,7 +717,6 @@ namespace BaseCore.APIService.Controllers
     public class AccessoryLossRequest
     {
         public int QuantityLoss { get; set; }
-        public string? NewStatus { get; set; }
         public string Reason { get; set; } = "";
         public string StaffId { get; set; } = "";
         public string StaffName { get; set; } = "";
