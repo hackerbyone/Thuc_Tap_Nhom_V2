@@ -32,8 +32,9 @@ export default function Warehouse() {
   const [commitPage, setCommitPage]   = useState(1);
   const [commitsLoading, setCommitsLoading] = useState(false);
 
-  // Sản phẩm để chọn khi tạo bể
+  // Sản phẩm cá (cat 1,2) để chọn bể — phụ kiện (cat 3,4) để chọn accessory
   const [products, setProducts]       = useState([]);
+  const [accProducts, setAccProducts] = useState([]);
 
   // Modal
   const [showModal, setShowModal]     = useState(false);
@@ -45,6 +46,13 @@ export default function Warehouse() {
   const [saving, setSaving]           = useState(false);
   const [syncing, setSyncing]         = useState(false);
 
+  // Loss modal
+  const [lossModal, setLossModal]     = useState({ show: false, type: '', item: null });
+  const [lossForm, setLossForm]       = useState({});
+  const [lossReason, setLossReason]   = useState('');
+  const [lossError, setLossError]     = useState('');
+  const [lossSaving, setLossSaving]   = useState(false);
+
   useEffect(() => { loadProducts(); }, []);
   useEffect(() => { if (activeTab === 'tanks') loadTanks(); },       [activeTab, tankPage]);
   useEffect(() => { if (activeTab === 'accessories') loadAccessories(); }, [activeTab, accPage, accType]);
@@ -52,11 +60,15 @@ export default function Warehouse() {
 
   const loadProducts = async () => {
     try {
-      const [res1, res2] = await Promise.all([
+      const [r1, r2, r3, r4, r5] = await Promise.all([
         productService.getAll('', 1, 1, 200),
         productService.getAll('', 2, 1, 200),
+        productService.getAll('', 3, 1, 200),
+        productService.getAll('', 4, 1, 200),
+        productService.getAll('', 5, 1, 200),
       ]);
-      setProducts([...(res1.items || []), ...(res2.items || [])]);
+      setProducts([...(r1.items || []), ...(r2.items || [])]);
+      setAccProducts([...(r3.items || []), ...(r4.items || []), ...(r5.items || [])]);
     } catch { /* ignore */ }
   };
 
@@ -107,9 +119,9 @@ export default function Warehouse() {
     setModalType('accessory');
     setEditingItem(acc);
     setFormData(acc ? {
-      name: acc.name, type: acc.type, quantity: acc.quantity,
-      unit: acc.unit || '', status: acc.status, description: acc.description || ''
-    } : { name: '', type: 'Accessory', quantity: 0, unit: 'cái', status: 'Good', description: '' });
+      productId: acc.productId || '', name: acc.name, type: acc.type,
+      quantity: acc.quantity, unit: acc.unit || '', status: acc.status, description: acc.description || ''
+    } : { productId: '', name: '', type: 'Accessory', quantity: 0, unit: 'cái', status: 'Good', description: '' });
     setCommitMsg('');
     setError('');
     setShowModal(true);
@@ -136,11 +148,15 @@ export default function Warehouse() {
         }
         loadTanks();
       } else {
-        if (!formData.name)
-          return setError('Vui lòng nhập tên phụ kiện/thiết bị');
+        if (!formData.productId && !formData.name)
+          return setError('Vui lòng chọn sản phẩm hoặc nhập tên');
         const payload = { ...formData, staffId, staffName, commitMessage: commitMsg || undefined };
-        if (editingItem) await warehouseService.updateAccessory(editingItem.id, payload);
-        else             await warehouseService.createAccessory(payload);
+        if (editingItem) {
+          await warehouseService.updateAccessory(editingItem.id, payload);
+        } else {
+          const res = await warehouseService.createAccessory(payload);
+          if (res?.updated) alert(res.message);
+        }
         loadAccessories();
       }
       setShowModal(false);
@@ -178,6 +194,45 @@ export default function Warehouse() {
   };
 
   const fmtDate = (d) => d ? new Date(d).toLocaleString('vi-VN') : '';
+
+  const openTankLoss = (tank) => {
+    setLossModal({ show: true, type: 'tank', item: tank });
+    setLossForm({ maleLoss: 0, femaleLoss: 0 });
+    setLossReason('');
+    setLossError('');
+  };
+
+  const openAccLoss = (acc) => {
+    setLossModal({ show: true, type: 'accessory', item: acc });
+    setLossForm({ quantityLoss: 0, newStatus: '' });
+    setLossReason('');
+    setLossError('');
+  };
+
+  const handleLossSave = async () => {
+    if (!lossReason.trim()) return setLossError('Vui lòng nhập lý do');
+    setLossSaving(true);
+    setLossError('');
+    try {
+      const staffId   = user?.userId || '';
+      const staffName = user?.name || user?.username || '';
+      if (lossModal.type === 'tank') {
+        const res = await warehouseService.recordTankLoss(lossModal.item.id, {
+          ...lossForm, reason: lossReason, staffId, staffName,
+        });
+        alert(res.message);
+        loadTanks();
+      } else {
+        const res = await warehouseService.recordAccessoryLoss(lossModal.item.id, {
+          ...lossForm, reason: lossReason, staffId, staffName,
+        });
+        alert(res.message);
+        loadAccessories();
+      }
+      setLossModal({ show: false, type: '', item: null });
+    } catch (e) { setLossError(e.message); }
+    finally { setLossSaving(false); }
+  };
 
   // ── Render ─────────────────────────────────────────────────────
   return (
@@ -281,6 +336,9 @@ export default function Warehouse() {
                             <small className="text-muted">Cập nhật: {fmtDate(tank.lastUpdated)} bởi {tank.lastUpdatedByName}</small>
                           </div>
                           <div className="card-footer d-flex justify-content-end" style={{ padding: '0.4rem 0.75rem' }}>
+                            <button className="btn btn-sm btn-outline-warning mr-2" title="Ghi nhận cá chết / hao hụt" onClick={() => openTankLoss(tank)}>
+                              <i className="fas fa-skull-crossbones"></i>
+                            </button>
                             <button className="btn btn-sm btn-outline-primary mr-2" onClick={() => openTankModal(tank)}>
                               <i className="fas fa-edit"></i>
                             </button>
@@ -370,6 +428,9 @@ export default function Warehouse() {
                           </td>
                           <td><small className="text-muted">{acc.description}</small></td>
                           <td>
+                            <button className="btn btn-xs btn-outline-warning mr-1" title="Ghi nhận hư hỏng / thất thoát" onClick={() => openAccLoss(acc)}>
+                              <i className="fas fa-exclamation-triangle"></i>
+                            </button>
                             <button className="btn btn-xs btn-outline-primary mr-1" onClick={() => openAccModal(acc)}>
                               <i className="fas fa-edit"></i>
                             </button>
@@ -451,7 +512,7 @@ export default function Warehouse() {
                 {modalType === 'tank' ? (
                   <TankForm formData={formData} setFormData={setFormData} products={products} />
                 ) : (
-                  <AccessoryForm formData={formData} setFormData={setFormData} />
+                  <AccessoryForm formData={formData} setFormData={setFormData} products={accProducts} />
                 )}
 
                 <hr />
@@ -465,6 +526,95 @@ export default function Warehouse() {
                 <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Huỷ</button>
                 <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
                   {saving ? <><i className="fas fa-spinner fa-spin mr-1"></i> Đang lưu...</> : <><i className="fas fa-save mr-1"></i> Lưu</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Loss Modal ─────────────────────────────────────────── */}
+      {lossModal.show && (
+        <div className="modal show d-block" style={{ background: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content border-warning">
+              <div className="modal-header bg-warning">
+                <h5 className="modal-title text-dark">
+                  {lossModal.type === 'tank'
+                    ? <><i className="fas fa-skull-crossbones mr-2"></i>Ghi nhận cá chết / hao hụt</>
+                    : <><i className="fas fa-exclamation-triangle mr-2"></i>Ghi nhận hư hỏng / thất thoát</>}
+                </h5>
+                <button className="close" onClick={() => setLossModal({ show: false, type: '', item: null })}>&times;</button>
+              </div>
+              <div className="modal-body">
+                {lossError && <div className="alert alert-danger py-2">{lossError}</div>}
+
+                <div className="alert alert-light border mb-3 py-2">
+                  <strong>{lossModal.item?.tankName || lossModal.item?.name}</strong>
+                  {lossModal.type === 'tank' && (
+                    <span className="ml-2 text-muted">
+                      (hiện có: {lossModal.item?.maleCount} đực / {lossModal.item?.femaleCount} cái)
+                    </span>
+                  )}
+                  {lossModal.type === 'accessory' && (
+                    <span className="ml-2 text-muted">(hiện có: {lossModal.item?.quantity})</span>
+                  )}
+                </div>
+
+                {lossModal.type === 'tank' ? (
+                  <div className="form-row">
+                    <div className="form-group col-6">
+                      <label>Số cá đực chết</label>
+                      <input type="number" min="0" max={lossModal.item?.maleCount}
+                        className="form-control"
+                        value={lossForm.maleLoss || 0}
+                        onChange={e => setLossForm(f => ({ ...f, maleLoss: parseInt(e.target.value) || 0 }))} />
+                    </div>
+                    <div className="form-group col-6">
+                      <label>Số cá cái chết</label>
+                      <input type="number" min="0" max={lossModal.item?.femaleCount}
+                        className="form-control"
+                        value={lossForm.femaleLoss || 0}
+                        onChange={e => setLossForm(f => ({ ...f, femaleLoss: parseInt(e.target.value) || 0 }))} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="form-row">
+                    <div className="form-group col-6">
+                      <label>Số lượng hư / mất</label>
+                      <input type="number" min="0" max={lossModal.item?.quantity}
+                        className="form-control"
+                        value={lossForm.quantityLoss || 0}
+                        onChange={e => setLossForm(f => ({ ...f, quantityLoss: parseInt(e.target.value) || 0 }))} />
+                    </div>
+                    <div className="form-group col-6">
+                      <label>Đổi trạng thái</label>
+                      <select className="form-control"
+                        value={lossForm.newStatus || ''}
+                        onChange={e => setLossForm(f => ({ ...f, newStatus: e.target.value }))}>
+                        <option value="">Giữ nguyên</option>
+                        <option value="Good">Tốt</option>
+                        <option value="Damaged">Hỏng</option>
+                        <option value="Maintenance">Đang sửa</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                <div className="form-group mb-0">
+                  <label>Lý do <span className="text-danger">*</span></label>
+                  <input className="form-control" value={lossReason}
+                    onChange={e => setLossReason(e.target.value)}
+                    placeholder="VD: Cá chết do bệnh, thiết bị rơi vỡ, hết hạn sử dụng..." />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary"
+                  onClick={() => setLossModal({ show: false, type: '', item: null })}>Huỷ</button>
+                <button className="btn btn-warning" onClick={handleLossSave} disabled={lossSaving}>
+                  {lossSaving
+                    ? <><i className="fas fa-spinner fa-spin mr-1"></i> Đang lưu...</>
+                    : <><i className="fas fa-save mr-1"></i> Xác nhận hao hụt</>}
                 </button>
               </div>
             </div>
@@ -514,24 +664,24 @@ function TankForm({ formData, setFormData, products }) {
   );
 }
 
-function AccessoryForm({ formData, setFormData }) {
+function AccessoryForm({ formData, setFormData, products }) {
   const set = (k, v) => setFormData(f => ({ ...f, [k]: v }));
+
+  const handleProductChange = (e) => {
+    const id = parseInt(e.target.value) || '';
+    set('productId', id);
+  };
+
   return (
     <>
-      <div className="form-row">
-        <div className="form-group col-md-6">
-          <label>Tên <span className="text-danger">*</span></label>
-          <input className="form-control" value={formData.name || ''}
-            onChange={e => set('name', e.target.value)} placeholder="VD: Máy lọc nước, Đèn UV..." />
-        </div>
-        <div className="form-group col-md-6">
-          <label>Loại</label>
-          <select className="form-control" value={formData.type || 'Accessory'}
-            onChange={e => set('type', e.target.value)}>
-            <option value="Accessory">Phụ kiện</option>
-            <option value="Equipment">Thiết bị</option>
-          </select>
-        </div>
+      <div className="form-group">
+        <label>Sản phẩm <span className="text-danger">*</span></label>
+        <select className="form-control" value={formData.productId || ''}
+          onChange={handleProductChange}>
+          <option value="">-- Chọn sản phẩm --</option>
+          {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        <small className="text-muted">Tên và loại sẽ lấy theo sản phẩm trong danh mục</small>
       </div>
       <div className="form-row">
         <div className="form-group col-md-4">

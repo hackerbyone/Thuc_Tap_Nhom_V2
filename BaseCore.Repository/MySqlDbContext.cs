@@ -156,6 +156,10 @@ namespace BaseCore.Repository
                 entity.Property(e => e.Description).HasMaxLength(1000);
                 entity.Property(e => e.CreatedBy).HasMaxLength(100);
                 entity.Property(e => e.CreatedByName).HasMaxLength(100);
+                entity.HasOne(e => e.Product)
+                      .WithMany()
+                      .HasForeignKey(e => e.ProductId)
+                      .OnDelete(DeleteBehavior.SetNull);
             });
 
             // InventoryCommit

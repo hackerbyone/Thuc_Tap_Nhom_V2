@@ -5,6 +5,8 @@ namespace BaseCore.Entities
     public class Accessory
     {
         public int Id { get; set; }
+        public int? ProductId { get; set; }
+        public Product? Product { get; set; }
         public string Name { get; set; } = "";
         // "Accessory" (phụ kiện) hoặc "Equipment" (thiết bị)
         public string Type { get; set; } = "Accessory";

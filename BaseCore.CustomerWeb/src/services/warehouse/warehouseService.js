@@ -70,6 +70,22 @@ export const warehouseService = {
     return handleResponse(res, 'Không thể xoá phụ kiện');
   },
 
+  // Ghi nhận hao hụt cá
+  recordTankLoss: async (id, data) => {
+    const res = await fetch(buildUrl(`/api/warehouse/tanks/${id}/loss`), {
+      method: 'POST', headers: getHeaders(true), body: JSON.stringify(data),
+    });
+    return handleResponse(res, 'Không thể ghi nhận hao hụt');
+  },
+
+  // Ghi nhận hư hỏng phụ kiện
+  recordAccessoryLoss: async (id, data) => {
+    const res = await fetch(buildUrl(`/api/warehouse/accessories/${id}/loss`), {
+      method: 'POST', headers: getHeaders(true), body: JSON.stringify(data),
+    });
+    return handleResponse(res, 'Không thể ghi nhận hư hỏng');
+  },
+
   // Đồng bộ kho từ danh sách sản phẩm
   syncFromProducts: async (staffId = '', staffName = '') => {
     const params = {};

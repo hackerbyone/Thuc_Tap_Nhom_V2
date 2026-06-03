@@ -247,6 +247,21 @@ using (var scope = app.Services.CreateScope())
             END
         ");
 
+        // Thêm cột ProductId vào Accessories (nullable FK → Products)
+        db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='Accessories' AND COLUMN_NAME='ProductId')
+                ALTER TABLE Accessories ADD ProductId int NULL;
+        ");
+        db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_Accessories_Products')
+                ALTER TABLE Accessories ADD CONSTRAINT FK_Accessories_Products
+                    FOREIGN KEY (ProductId) REFERENCES Products(Id) ON DELETE SET NULL;
+        ");
+        db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='UIX_Accessories_ProductId' AND object_id=OBJECT_ID('Accessories'))
+                CREATE UNIQUE INDEX UIX_Accessories_ProductId ON Accessories(ProductId) WHERE ProductId IS NOT NULL AND IsActive = 1;
+        ");
+
         // Thêm UserType 3 = Warehouse nếu cần (chỉ cần về schema, không cần migration riêng)
         // UserType trong Users đã là int - không cần thay đổi bảng
 

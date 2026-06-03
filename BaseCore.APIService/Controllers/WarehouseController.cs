@@ -212,20 +212,77 @@ namespace BaseCore.APIService.Controllers
         [HttpPost("accessories")]
         public async Task<IActionResult> CreateAccessory([FromBody] AccessoryRequest req)
         {
+            // Nếu có ProductId → upsert: cộng dồn số lượng vào bản ghi hiện có
+            if (req.ProductId.HasValue)
+            {
+                var product = await _context.Products.FindAsync(req.ProductId.Value);
+                if (product == null) return BadRequest(new { message = "Sản phẩm không tồn tại" });
+
+                var existing = await _context.Accessories
+                    .FirstOrDefaultAsync(a => a.ProductId == req.ProductId && a.IsActive);
+
+                var accName = product.Name ?? $"Sản phẩm #{product.Id}";
+                var accType = product.CategoryId == 3 ? "Equipment" : "Accessory";
+
+                if (existing != null)
+                {
+                    var oldValue = JsonSerializer.Serialize(new { existing.Quantity, existing.Status });
+                    existing.Name     = accName;
+                    existing.Quantity += req.Quantity;
+                    existing.Status   = req.Status ?? existing.Status;
+                    if (!string.IsNullOrWhiteSpace(req.Description)) existing.Description = req.Description;
+                    existing.Modified = DateTime.Now;
+                    await _context.SaveChangesAsync();
+
+                    await AddCommit(req.StaffId, req.StaffName,
+                        req.CommitMessage ?? $"Nhập thêm {(accType == "Equipment" ? "thiết bị" : "phụ kiện")} {accName}: +{req.Quantity}",
+                        "Accessory", existing.Id, accName,
+                        oldValue,
+                        JsonSerializer.Serialize(new { existing.Quantity, existing.Status }));
+
+                    return Ok(new { existing.Id, message = $"Đã cộng thêm {req.Quantity} vào {accName}.", updated = true });
+                }
+
+                var newAcc = new Accessory
+                {
+                    ProductId     = req.ProductId,
+                    Name          = accName,
+                    Type          = accType,
+                    Quantity      = req.Quantity,
+                    Unit          = req.Unit,
+                    Status        = req.Status ?? "Good",
+                    Description   = req.Description,
+                    IsActive      = true,
+                    Created       = DateTime.Now,
+                    CreatedBy     = req.StaffId,
+                    CreatedByName = req.StaffName
+                };
+                _context.Accessories.Add(newAcc);
+                await _context.SaveChangesAsync();
+
+                await AddCommit(req.StaffId, req.StaffName,
+                    req.CommitMessage ?? $"Thêm {(accType == "Equipment" ? "thiết bị" : "phụ kiện")}: {accName}",
+                    "Accessory", newAcc.Id, accName, null,
+                    JsonSerializer.Serialize(new { req.Quantity, newAcc.Status }));
+
+                return Ok(new { newAcc.Id, message = "Tạo thành công.", updated = false });
+            }
+
+            // Không có ProductId → tạo mới thủ công (cho phép tên trùng)
             if (string.IsNullOrWhiteSpace(req.Name))
                 return BadRequest(new { message = "Tên phụ kiện không được để trống" });
 
             var accessory = new Accessory
             {
-                Name         = req.Name,
-                Type         = req.Type ?? "Accessory",
-                Quantity     = req.Quantity,
-                Unit         = req.Unit,
-                Status       = req.Status ?? "Good",
-                Description  = req.Description,
-                IsActive     = true,
-                Created      = DateTime.Now,
-                CreatedBy    = req.StaffId,
+                Name          = req.Name,
+                Type          = req.Type ?? "Accessory",
+                Quantity      = req.Quantity,
+                Unit          = req.Unit,
+                Status        = req.Status ?? "Good",
+                Description   = req.Description,
+                IsActive      = true,
+                Created       = DateTime.Now,
+                CreatedBy     = req.StaffId,
                 CreatedByName = req.StaffName
             };
             _context.Accessories.Add(accessory);
@@ -233,11 +290,10 @@ namespace BaseCore.APIService.Controllers
 
             await AddCommit(req.StaffId, req.StaffName,
                 req.CommitMessage ?? $"Thêm {(req.Type == "Equipment" ? "thiết bị" : "phụ kiện")}: {req.Name}",
-                "Accessory", accessory.Id, req.Name,
-                null,
+                "Accessory", accessory.Id, req.Name, null,
                 JsonSerializer.Serialize(new { req.Quantity, req.Status }));
 
-            return Ok(new { accessory.Id, message = "Tạo thành công" });
+            return Ok(new { accessory.Id, message = "Tạo thành công.", updated = false });
         }
 
         [HttpPut("accessories/{id}")]
@@ -287,10 +343,73 @@ namespace BaseCore.APIService.Controllers
         }
 
         // ────────────────────────────────────────────────────────────
+        //  GHI NHẬN HAO HỤT
+        // ────────────────────────────────────────────────────────────
+
+        [HttpPost("tanks/{id}/loss")]
+        public async Task<IActionResult> RecordTankLoss(int id, [FromBody] TankLossRequest req)
+        {
+            var tank = await _context.TankFishTrackings.FindAsync(id);
+            if (tank == null) return NotFound(new { message = "Không tìm thấy bể cá" });
+
+            if (req.MaleLoss < 0 || req.FemaleLoss < 0)
+                return BadRequest(new { message = "Số lượng hao hụt không được âm" });
+            if (req.MaleLoss > tank.MaleCount || req.FemaleLoss > tank.FemaleCount)
+                return BadRequest(new { message = $"Hao hụt vượt quá số hiện có (đực: {tank.MaleCount}, cái: {tank.FemaleCount})" });
+            if (string.IsNullOrWhiteSpace(req.Reason))
+                return BadRequest(new { message = "Vui lòng nhập lý do" });
+
+            var oldValue = JsonSerializer.Serialize(new { tank.MaleCount, tank.FemaleCount });
+            tank.MaleCount         -= req.MaleLoss;
+            tank.FemaleCount       -= req.FemaleLoss;
+            tank.LastUpdated       = DateTime.Now;
+            tank.LastUpdatedBy     = req.StaffId;
+            tank.LastUpdatedByName = req.StaffName;
+            await _context.SaveChangesAsync();
+
+            await AddCommit(req.StaffId, req.StaffName,
+                $"Hao hụt {tank.TankName}: -{req.MaleLoss} đực, -{req.FemaleLoss} cái — {req.Reason}",
+                "Fish", tank.Id, tank.TankName,
+                oldValue,
+                JsonSerializer.Serialize(new { tank.MaleCount, tank.FemaleCount }));
+
+            return Ok(new { message = $"Đã ghi nhận -{req.MaleLoss} đực, -{req.FemaleLoss} cái khỏi bể {tank.TankName}." });
+        }
+
+        [HttpPost("accessories/{id}/loss")]
+        public async Task<IActionResult> RecordAccessoryLoss(int id, [FromBody] AccessoryLossRequest req)
+        {
+            var acc = await _context.Accessories.FindAsync(id);
+            if (acc == null || !acc.IsActive) return NotFound(new { message = "Không tìm thấy phụ kiện" });
+
+            if (req.QuantityLoss < 0)
+                return BadRequest(new { message = "Số lượng hư hỏng không được âm" });
+            if (req.QuantityLoss > acc.Quantity)
+                return BadRequest(new { message = $"Số lượng hư hỏng vượt quá tồn kho ({acc.Quantity})" });
+            if (string.IsNullOrWhiteSpace(req.Reason))
+                return BadRequest(new { message = "Vui lòng nhập lý do" });
+
+            var oldValue = JsonSerializer.Serialize(new { acc.Quantity, acc.Status });
+            acc.Quantity -= req.QuantityLoss;
+            if (!string.IsNullOrWhiteSpace(req.NewStatus)) acc.Status = req.NewStatus;
+            acc.Modified = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            await AddCommit(req.StaffId, req.StaffName,
+                $"Hư hỏng/mất {acc.Name}: -{req.QuantityLoss} — {req.Reason}",
+                "Accessory", acc.Id, acc.Name,
+                oldValue,
+                JsonSerializer.Serialize(new { acc.Quantity, acc.Status }));
+
+            return Ok(new { message = $"Đã ghi nhận -{req.QuantityLoss} {acc.Name}." });
+        }
+
+        // ────────────────────────────────────────────────────────────
         //  ĐỒNG BỘ KHO TỪ PRODUCTS (category cá: 1, 2)
         // ────────────────────────────────────────────────────────────
 
-        private static readonly int[] FishCategoryIds = [1, 2];
+        private static readonly int[] FishCategoryIds      = [1, 2];
+        private static readonly int[] AccessoryCategoryIds = [3, 4, 5];
 
         // Tính MaleCount/FemaleCount từ Product:
         // - Nếu có gender breakdown → dùng MaleStock/FemaleStock
@@ -374,12 +493,61 @@ namespace BaseCore.APIService.Controllers
                 }
             }
 
+            // ── Sync phụ kiện & thiết bị (category 3, 4) ─────────────
+            var accProducts = await _context.Products
+                .Where(p => AccessoryCategoryIds.Contains(p.CategoryId) && p.Stock > 0)
+                .ToListAsync();
+
+            var existingAccs = await _context.Accessories
+                .Where(a => a.IsActive && a.ProductId != null &&
+                            accProducts.Select(p => (int?)p.Id).Contains(a.ProductId))
+                .ToListAsync();
+            var accMap = existingAccs.ToDictionary(a => a.ProductId!.Value);
+
+            int accCreated = 0, accUpdated = 0;
+            foreach (var p in accProducts)
+            {
+                var accName = p.Name ?? $"Sản phẩm #{p.Id}";
+                var accType = p.CategoryId == 3 ? "Equipment" : "Accessory";
+
+                if (!accMap.TryGetValue(p.Id, out var acc))
+                {
+                    _context.Accessories.Add(new Accessory
+                    {
+                        ProductId     = p.Id,
+                        Name          = accName,
+                        Type          = accType,
+                        Quantity      = p.Stock,
+                        Status        = "Good",
+                        IsActive      = true,
+                        Created       = DateTime.Now,
+                        CreatedBy     = staffId,
+                        CreatedByName = staffName
+                    });
+                    await _context.SaveChangesAsync();
+                    accCreated++;
+                }
+                else if (acc.Quantity != p.Stock || acc.Name != accName)
+                {
+                    var oldVal = JsonSerializer.Serialize(new { acc.Quantity });
+                    acc.Name     = accName;
+                    acc.Quantity = p.Stock;
+                    acc.Modified = DateTime.Now;
+                    await _context.SaveChangesAsync();
+
+                    await AddCommit(staffId, staffName,
+                        $"Đồng bộ kho: cập nhật {accName}",
+                        "Accessory", acc.Id, accName, oldVal,
+                        JsonSerializer.Serialize(new { p.Stock }));
+                    accUpdated++;
+                }
+            }
+
             return Ok(new
             {
-                created,
-                updated,
-                total  = fishProducts.Count,
-                message = $"Đồng bộ hoàn tất: tạo {created} bể mới, cập nhật {updated} bể."
+                fish    = new { created, updated, total = fishProducts.Count },
+                acc     = new { created = accCreated, updated = accUpdated, total = accProducts.Count },
+                message = $"Đồng bộ hoàn tất — Bể: +{created} mới, ~{updated} cập nhật | Phụ kiện: +{accCreated} mới, ~{accUpdated} cập nhật."
             });
         }
 
@@ -451,8 +619,27 @@ namespace BaseCore.APIService.Controllers
         public string? CommitMessage { get; set; }
     }
 
+    public class TankLossRequest
+    {
+        public int MaleLoss { get; set; }
+        public int FemaleLoss { get; set; }
+        public string Reason { get; set; } = "";
+        public string StaffId { get; set; } = "";
+        public string StaffName { get; set; } = "";
+    }
+
+    public class AccessoryLossRequest
+    {
+        public int QuantityLoss { get; set; }
+        public string? NewStatus { get; set; }
+        public string Reason { get; set; } = "";
+        public string StaffId { get; set; } = "";
+        public string StaffName { get; set; } = "";
+    }
+
     public class AccessoryRequest
     {
+        public int? ProductId { get; set; }
         public string Name { get; set; } = "";
         public string? Type { get; set; }
         public int Quantity { get; set; }

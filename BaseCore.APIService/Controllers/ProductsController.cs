@@ -155,9 +155,10 @@ namespace BaseCore.APIService.Controllers
 
             await _productRepository.AddAsync(product);
 
-            // Tự động tạo bể kho cho sản phẩm cá (category 1, 2)
             if (product.CategoryId == 1 || product.CategoryId == 2)
                 await UpsertTank(product);
+            else if (product.CategoryId == 3 || product.CategoryId == 4 || product.CategoryId == 5)
+                await UpsertAccessoryEntry(product);
 
             return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
         }
@@ -209,9 +210,10 @@ namespace BaseCore.APIService.Controllers
 
             await _productRepository.UpdateAsync(product);
 
-            // Tự động cập nhật bể kho nếu sản phẩm thuộc category cá
             if (product.CategoryId == 1 || product.CategoryId == 2)
                 await UpsertTank(product);
+            else if (product.CategoryId == 3 || product.CategoryId == 4 || product.CategoryId == 5)
+                await UpsertAccessoryEntry(product);
 
             return Ok(product);
         }
@@ -242,6 +244,38 @@ namespace BaseCore.APIService.Controllers
                 return ToDto(p, avg, cnt);
             }).ToList();
             return Ok(result);
+        }
+
+        // Tạo hoặc cập nhật phụ kiện/thiết bị tương ứng với sản phẩm (category 3, 4)
+        private async Task UpsertAccessoryEntry(Product product)
+        {
+            var name = product.Name ?? $"Sản phẩm #{product.Id}";
+            var type = product.CategoryId == 3 ? "Equipment" : "Accessory";
+            var acc  = await _context.Accessories
+                .FirstOrDefaultAsync(a => a.ProductId == product.Id && a.IsActive);
+
+            if (acc == null)
+            {
+                _context.Accessories.Add(new BaseCore.Entities.Accessory
+                {
+                    ProductId     = product.Id,
+                    Name          = name,
+                    Type          = type,
+                    Quantity      = product.Stock,
+                    Status        = "Good",
+                    IsActive      = true,
+                    Created       = DateTime.Now,
+                    CreatedBy     = "system",
+                    CreatedByName = "Hệ thống (auto)"
+                });
+            }
+            else
+            {
+                acc.Name     = name;
+                acc.Quantity = product.Stock;
+                acc.Modified = DateTime.Now;
+            }
+            await _context.SaveChangesAsync();
         }
 
         // Tạo hoặc cập nhật bể kho tương ứng với sản phẩm cá
