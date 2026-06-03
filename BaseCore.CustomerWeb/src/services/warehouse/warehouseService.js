@@ -70,6 +70,18 @@ export const warehouseService = {
     return handleResponse(res, 'Không thể xoá phụ kiện');
   },
 
+  // Đồng bộ kho từ danh sách sản phẩm
+  syncFromProducts: async (staffId = '', staffName = '') => {
+    const params = {};
+    if (staffId)   params.staffId   = staffId;
+    if (staffName) params.staffName = staffName;
+    const res = await fetch(buildUrl('/api/warehouse/sync', params), {
+      method: 'POST',
+      headers: getHeaders(true),
+    });
+    return handleResponse(res, 'Không thể đồng bộ kho');
+  },
+
   // Commit log
   getCommits: async (staffId = '', targetType = '', page = 1, pageSize = 30) => {
     const params = { page, pageSize };

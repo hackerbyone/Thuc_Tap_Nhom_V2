@@ -154,6 +154,11 @@ namespace BaseCore.APIService.Controllers
             };
 
             await _productRepository.AddAsync(product);
+
+            // Tự động tạo bể kho cho sản phẩm cá (category 1, 2)
+            if (product.CategoryId == 1 || product.CategoryId == 2)
+                await UpsertTank(product);
+
             return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
         }
 
@@ -203,6 +208,11 @@ namespace BaseCore.APIService.Controllers
             product.Stock = isGenderProduct ? newMaleStock + newFemaleStock : targetStock;
 
             await _productRepository.UpdateAsync(product);
+
+            // Tự động cập nhật bể kho nếu sản phẩm thuộc category cá
+            if (product.CategoryId == 1 || product.CategoryId == 2)
+                await UpsertTank(product);
+
             return Ok(product);
         }
 
@@ -232,6 +242,57 @@ namespace BaseCore.APIService.Controllers
                 return ToDto(p, avg, cnt);
             }).ToList();
             return Ok(result);
+        }
+
+        // Tạo hoặc cập nhật bể kho tương ứng với sản phẩm cá
+        private async Task UpsertTank(Product product)
+        {
+            int male, female;
+            string? notes = null;
+
+            if (product.MaleStock > 0 || product.FemaleStock > 0)
+            {
+                male   = product.MaleStock;
+                female = product.FemaleStock;
+            }
+            else
+            {
+                // Chưa phân loại giới tính → đặt hết vào MaleCount để TotalCount = Stock
+                male   = product.Stock;
+                female = 0;
+                notes  = "Chưa phân loại giới tính";
+            }
+
+            var tankName = product.Name ?? $"Loài #{product.Id}";
+            var tank = await _context.TankFishTrackings
+                .FirstOrDefaultAsync(t => t.ProductId == product.Id);
+
+            if (tank == null)
+            {
+                _context.TankFishTrackings.Add(new TankFishTracking
+                {
+                    TankName          = tankName,
+                    ProductId         = product.Id,
+                    MaleCount         = male,
+                    FemaleCount       = female,
+                    Notes             = notes,
+                    LastUpdated       = DateTime.Now,
+                    LastUpdatedBy     = "system",
+                    LastUpdatedByName = "Hệ thống (auto)"
+                });
+            }
+            else
+            {
+                tank.TankName          = tankName;
+                tank.MaleCount         = male;
+                tank.FemaleCount       = female;
+                if (notes != null) tank.Notes = notes;
+                tank.LastUpdated       = DateTime.Now;
+                tank.LastUpdatedBy     = "system";
+                tank.LastUpdatedByName = "Hệ thống (auto)";
+            }
+
+            await _context.SaveChangesAsync();
         }
     }
 

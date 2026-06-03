@@ -74,35 +74,58 @@ namespace BaseCore.APIService.Controllers
         [HttpPost("tanks")]
         public async Task<IActionResult> CreateTank([FromBody] TankRequest req)
         {
-            if (string.IsNullOrWhiteSpace(req.TankName))
-                return BadRequest(new { message = "Tên bể không được để trống" });
-
             var product = await _context.Products.FindAsync(req.ProductId);
             if (product == null)
                 return BadRequest(new { message = "Sản phẩm không tồn tại" });
 
+            var tankName = product.Name ?? $"Loài #{product.Id}";
+
+            // Upsert: nếu đã có bể cho loài này thì cập nhật, không tạo mới
+            var existing = await _context.TankFishTrackings
+                .FirstOrDefaultAsync(t => t.ProductId == req.ProductId);
+
+            if (existing != null)
+            {
+                var oldValue = JsonSerializer.Serialize(new { existing.MaleCount, existing.FemaleCount });
+                existing.TankName          = tankName;
+                existing.MaleCount         += req.MaleCount;
+                existing.FemaleCount       += req.FemaleCount;
+                if (!string.IsNullOrWhiteSpace(req.Notes)) existing.Notes = req.Notes;
+                existing.LastUpdated       = DateTime.Now;
+                existing.LastUpdatedBy     = req.StaffId;
+                existing.LastUpdatedByName = req.StaffName;
+                await _context.SaveChangesAsync();
+
+                await AddCommit(req.StaffId, req.StaffName,
+                    req.CommitMessage ?? $"Nhập thêm vào bể {tankName}: +{req.MaleCount} đực, +{req.FemaleCount} cái",
+                    "Fish", existing.Id, tankName,
+                    oldValue,
+                    JsonSerializer.Serialize(new { existing.MaleCount, existing.FemaleCount }));
+
+                return Ok(new { existing.Id, message = $"Đã cộng thêm {req.MaleCount} đực + {req.FemaleCount} cái vào bể {tankName}.", updated = true });
+            }
+
             var tank = new TankFishTracking
             {
-                TankName         = req.TankName,
-                ProductId        = req.ProductId,
-                MaleCount        = req.MaleCount,
-                FemaleCount      = req.FemaleCount,
-                Notes            = req.Notes,
-                LastUpdated      = DateTime.Now,
-                LastUpdatedBy    = req.StaffId,
+                TankName          = tankName,
+                ProductId         = product.Id,
+                MaleCount         = req.MaleCount,
+                FemaleCount       = req.FemaleCount,
+                Notes             = req.Notes,
+                LastUpdated       = DateTime.Now,
+                LastUpdatedBy     = req.StaffId,
                 LastUpdatedByName = req.StaffName
             };
             _context.TankFishTrackings.Add(tank);
             await _context.SaveChangesAsync();
 
-            // Ghi commit
             await AddCommit(req.StaffId, req.StaffName,
-                req.CommitMessage ?? $"Tạo bể mới: {req.TankName}",
-                "Fish", tank.Id, req.TankName,
+                req.CommitMessage ?? $"Tạo bể mới: {tankName}",
+                "Fish", tank.Id, tankName,
                 null,
                 JsonSerializer.Serialize(new { req.MaleCount, req.FemaleCount }));
 
-            return Ok(new { tank.Id, message = "Tạo bể thành công" });
+            return Ok(new { tank.Id, message = "Tạo bể thành công.", updated = false });
         }
 
         [HttpPut("tanks/{id}")]
@@ -113,13 +136,20 @@ namespace BaseCore.APIService.Controllers
 
             var oldValue = JsonSerializer.Serialize(new { tank.MaleCount, tank.FemaleCount, tank.Notes });
 
-            tank.TankName         = req.TankName ?? tank.TankName;
-            tank.ProductId        = req.ProductId > 0 ? req.ProductId : tank.ProductId;
-            tank.MaleCount        = req.MaleCount;
-            tank.FemaleCount      = req.FemaleCount;
-            tank.Notes            = req.Notes;
-            tank.LastUpdated      = DateTime.Now;
-            tank.LastUpdatedBy    = req.StaffId;
+            // Nếu đổi loài cá thì cập nhật TankName theo tên loài mới
+            if (req.ProductId > 0 && req.ProductId != tank.ProductId)
+            {
+                var product = await _context.Products.FindAsync(req.ProductId);
+                if (product == null) return BadRequest(new { message = "Sản phẩm không tồn tại" });
+                tank.ProductId = req.ProductId;
+                tank.TankName  = product.Name ?? $"Loài #{req.ProductId}";
+            }
+
+            tank.MaleCount         = req.MaleCount;
+            tank.FemaleCount       = req.FemaleCount;
+            tank.Notes             = req.Notes;
+            tank.LastUpdated       = DateTime.Now;
+            tank.LastUpdatedBy     = req.StaffId;
             tank.LastUpdatedByName = req.StaffName;
 
             await _context.SaveChangesAsync();
@@ -254,6 +284,103 @@ namespace BaseCore.APIService.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Xoá thành công" });
+        }
+
+        // ────────────────────────────────────────────────────────────
+        //  ĐỒNG BỘ KHO TỪ PRODUCTS (category cá: 1, 2)
+        // ────────────────────────────────────────────────────────────
+
+        private static readonly int[] FishCategoryIds = [1, 2];
+
+        // Tính MaleCount/FemaleCount từ Product:
+        // - Nếu có gender breakdown → dùng MaleStock/FemaleStock
+        // - Nếu chưa → đặt hết vào MaleCount để TotalCount = Stock
+        private static (int male, int female, string? notes) GetTankCounts(Product p)
+        {
+            if (p.MaleStock > 0 || p.FemaleStock > 0)
+                return (p.MaleStock, p.FemaleStock, null);
+            return (p.Stock, 0, "Chưa phân loại giới tính");
+        }
+
+        /// <summary>
+        /// Đồng bộ đầy đủ: tạo bể mới cho cá categories 1,2 chưa có bể
+        /// VÀ cập nhật bể đã tồn tại nếu số lượng lệch với Products.
+        /// </summary>
+        [HttpPost("sync")]
+        public async Task<IActionResult> SyncFromProducts(
+            [FromQuery] string staffId   = "system",
+            [FromQuery] string staffName = "Hệ thống")
+        {
+            // Lấy tất cả cá (category 1, 2) còn hàng
+            var fishProducts = await _context.Products
+                .Where(p => FishCategoryIds.Contains(p.CategoryId)
+                         && (p.MaleStock > 0 || p.FemaleStock > 0 || p.Stock > 0))
+                .ToListAsync();
+
+            // Bản đồ ProductId → bể hiện có
+            var existingTanks = await _context.TankFishTrackings
+                .Where(t => fishProducts.Select(p => p.Id).Contains(t.ProductId))
+                .ToListAsync();
+            var tankMap = existingTanks.ToDictionary(t => t.ProductId);
+
+            int created = 0, updated = 0;
+
+            foreach (var p in fishProducts)
+            {
+                var (male, female, notes) = GetTankCounts(p);
+                var tankName = p.Name ?? $"Loài #{p.Id}";
+
+                if (!tankMap.TryGetValue(p.Id, out var tank))
+                {
+                    // Tạo mới
+                    tank = new TankFishTracking
+                    {
+                        TankName          = tankName,
+                        ProductId         = p.Id,
+                        MaleCount         = male,
+                        FemaleCount       = female,
+                        Notes             = notes,
+                        LastUpdated       = DateTime.Now,
+                        LastUpdatedBy     = staffId,
+                        LastUpdatedByName = staffName
+                    };
+                    _context.TankFishTrackings.Add(tank);
+                    await _context.SaveChangesAsync();
+
+                    await AddCommit(staffId, staffName,
+                        $"Đồng bộ kho: tạo bể cho {tankName}",
+                        "Fish", tank.Id, tankName, null,
+                        JsonSerializer.Serialize(new { male, female }));
+                    created++;
+                }
+                else if (tank.MaleCount != male || tank.FemaleCount != female || tank.TankName != tankName)
+                {
+                    // Cập nhật bể đã lệch
+                    var oldValue = JsonSerializer.Serialize(new { tank.MaleCount, tank.FemaleCount });
+                    tank.TankName          = tankName;
+                    tank.MaleCount         = male;
+                    tank.FemaleCount       = female;
+                    if (notes != null) tank.Notes = notes;
+                    tank.LastUpdated       = DateTime.Now;
+                    tank.LastUpdatedBy     = staffId;
+                    tank.LastUpdatedByName = staffName;
+                    await _context.SaveChangesAsync();
+
+                    await AddCommit(staffId, staffName,
+                        $"Đồng bộ kho: cập nhật bể {tankName}",
+                        "Fish", tank.Id, tankName, oldValue,
+                        JsonSerializer.Serialize(new { male, female }));
+                    updated++;
+                }
+            }
+
+            return Ok(new
+            {
+                created,
+                updated,
+                total  = fishProducts.Count,
+                message = $"Đồng bộ hoàn tất: tạo {created} bể mới, cập nhật {updated} bể."
+            });
         }
 
         // ────────────────────────────────────────────────────────────

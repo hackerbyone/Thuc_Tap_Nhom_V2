@@ -199,8 +199,9 @@ using (var scope = app.Services.CreateScope())
                     LastUpdatedBy   nvarchar(100) NOT NULL DEFAULT N'',
                     LastUpdatedByName nvarchar(100) NOT NULL DEFAULT N'',
                     CONSTRAINT FK_TankFishTrackings_Products FOREIGN KEY (ProductId)
-                        REFERENCES Products(Id) ON DELETE RESTRICT
+                        REFERENCES Products(Id) ON DELETE NO ACTION
                 );
+                CREATE INDEX IX_TankFishTrackings_ProductId ON TankFishTrackings(ProductId);
             END
         ");
 

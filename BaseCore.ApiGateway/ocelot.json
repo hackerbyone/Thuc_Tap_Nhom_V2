@@ -175,6 +175,24 @@
       ],
       "UpstreamPathTemplate": "/api/statistics/{everything}",
       "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/warehouse/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "localhost", "Port": 5001 }
+      ],
+      "UpstreamPathTemplate": "/api/warehouse/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/warehouse",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "localhost", "Port": 5001 }
+      ],
+      "UpstreamPathTemplate": "/api/warehouse",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
     }
   ],
   "GlobalConfiguration": {

@@ -43,6 +43,7 @@ export default function Warehouse() {
   const [commitMsg, setCommitMsg]     = useState('');
   const [error, setError]             = useState('');
   const [saving, setSaving]           = useState(false);
+  const [syncing, setSyncing]         = useState(false);
 
   useEffect(() => { loadProducts(); }, []);
   useEffect(() => { if (activeTab === 'tanks') loadTanks(); },       [activeTab, tankPage]);
@@ -51,8 +52,11 @@ export default function Warehouse() {
 
   const loadProducts = async () => {
     try {
-      const res = await productService.getAll('', null, 1, 200);
-      setProducts(res.items || []);
+      const [res1, res2] = await Promise.all([
+        productService.getAll('', 1, 1, 200),
+        productService.getAll('', 2, 1, 200),
+      ]);
+      setProducts([...(res1.items || []), ...(res2.items || [])]);
     } catch { /* ignore */ }
   };
 
@@ -119,11 +123,17 @@ export default function Warehouse() {
       const staffName = user?.name || user?.username || '';
 
       if (modalType === 'tank') {
-        if (!formData.tankName || !formData.productId)
-          return setError('Vui lòng nhập tên bể và chọn loài cá');
+        if (!formData.productId)
+          return setError('Vui lòng chọn loài cá');
         const payload = { ...formData, staffId, staffName, commitMessage: commitMsg || undefined };
-        if (editingItem) await warehouseService.updateTank(editingItem.id, payload);
-        else             await warehouseService.createTank(payload);
+        if (editingItem) {
+          await warehouseService.updateTank(editingItem.id, payload);
+        } else {
+          const res = await warehouseService.createTank(payload);
+          if (res?.updated) {
+            alert(res.message);
+          }
+        }
         loadTanks();
       } else {
         if (!formData.name)
@@ -152,6 +162,19 @@ export default function Warehouse() {
       await warehouseService.deleteAccessory(acc.id, user?.userId || '', user?.name || '');
       loadAccessories();
     } catch (e) { alert(e.message); }
+  };
+
+  const handleSync = async () => {
+    if (!window.confirm('Tự động tạo bể cho tất cả loài cá chưa có bể trong kho?\nSố lượng sẽ lấy từ MaleStock/FemaleStock của sản phẩm.')) return;
+    setSyncing(true);
+    try {
+      const staffId   = user?.userId || '';
+      const staffName = user?.name || user?.username || '';
+      const res = await warehouseService.syncFromProducts(staffId, staffName);
+      alert(res.message || `Đồng bộ: tạo ${res.created} bể mới, cập nhật ${res.updated} bể.`);
+      if ((res.created || 0) + (res.updated || 0) > 0) loadTanks();
+    } catch (e) { alert(e.message); }
+    finally { setSyncing(false); }
   };
 
   const fmtDate = (d) => d ? new Date(d).toLocaleString('vi-VN') : '';
@@ -202,9 +225,16 @@ export default function Warehouse() {
                 <h3 className="card-title">
                   <i className="fas fa-fish mr-1"></i> Theo dõi cá trong bể
                 </h3>
-                <button className="btn btn-primary btn-sm" onClick={() => openTankModal()}>
-                  <i className="fas fa-plus mr-1"></i> Thêm bể
-                </button>
+                <div>
+                  <button className="btn btn-warning btn-sm mr-2" onClick={handleSync} disabled={syncing}>
+                    {syncing
+                      ? <><i className="fas fa-spinner fa-spin mr-1"></i> Đang đồng bộ...</>
+                      : <><i className="fas fa-sync mr-1"></i> Đồng bộ từ sản phẩm</>}
+                  </button>
+                  <button className="btn btn-primary btn-sm" onClick={() => openTankModal()}>
+                    <i className="fas fa-plus mr-1"></i> Thêm bể
+                  </button>
+                </div>
               </div>
               <div className="card-body">
                 <form className="form-inline mb-3" onSubmit={e => { e.preventDefault(); setTankPage(1); loadTanks(); }}>
@@ -449,20 +479,14 @@ function TankForm({ formData, setFormData, products }) {
   const set = (k, v) => setFormData(f => ({ ...f, [k]: v }));
   return (
     <>
-      <div className="form-row">
-        <div className="form-group col-md-6">
-          <label>Tên bể <span className="text-danger">*</span></label>
-          <input className="form-control" value={formData.tankName || ''}
-            onChange={e => set('tankName', e.target.value)} placeholder="VD: Bể A1, Bể Koi số 3..." />
-        </div>
-        <div className="form-group col-md-6">
-          <label>Loài cá <span className="text-danger">*</span></label>
-          <select className="form-control" value={formData.productId || ''}
-            onChange={e => set('productId', parseInt(e.target.value))}>
-            <option value="">-- Chọn sản phẩm --</option>
-            {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </div>
+      <div className="form-group">
+        <label>Loài cá <span className="text-danger">*</span></label>
+        <select className="form-control" value={formData.productId || ''}
+          onChange={e => set('productId', parseInt(e.target.value))}>
+          <option value="">-- Chọn loài cá --</option>
+          {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        <small className="text-muted">Tên bể sẽ được lấy từ tên loài cá</small>
       </div>
       <div className="form-row">
         <div className="form-group col-md-4">

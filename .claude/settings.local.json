@@ -6,7 +6,29 @@
       "Bash(dir *)",
       "PowerShell(New-Item *)",
       "PowerShell(dotnet build *)",
-      "Bash(Select-String -Pattern \"error|warning|Build succeeded\")"
+      "Bash(Select-String -Pattern \"error|warning|Build succeeded\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\shopcacanh\\\\BaseCore\\\\Cong_Nghe_Web\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(Get-ChildItem -Path \"D:\\\\shopcacanh\\\\BaseCore\\\\Cong_Nghe_Web\\\\BaseCore.AuthService\\\\Controllers\" -Force)",
+      "Bash(Select-Object Name)",
+      "Bash(grep -E \"\\\\.\\(cs\\)$\")",
+      "Bash(npm install *)",
+      "Read(//root/.nuget/**)",
+      "Read(//c/Users/trinh/.nuget/**)",
+      "Bash(npx vite *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\shopcacanh\\\\BaseCore\\\\Cong_Nghe_Web\" -Directory)",
+      "Bash(xargs grep -l -i \"order\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\shopcacanh\\\\BaseCore\\\\Cong_Nghe_Web\" -Directory -Force)",
+      "Bash(Get-ChildItem -Path \"D:\\\\shopcacanh\\\\BaseCore\\\\Cong_Nghe_Web\\\\BaseCore.Repository\\\\Migrations\" -Filter \"*.cs\")",
+      "Bash(dotnet ef *)",
+      "Bash(dotnet tool *)",
+      "Bash(sqlcmd *)",
+      "Bash(findstr /i \"error\")",
+      "Bash(findstr /v \"MSB3027\\\\|MSB3021\\\\|locked\")",
+      "Bash(Select-String \"error CS\")",
+      "Bash(curl *)",
+      "PowerShell(Get-Process *)"
     ]
   }
 }
