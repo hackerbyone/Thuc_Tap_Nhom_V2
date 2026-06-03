@@ -36,7 +36,7 @@ export default function Login() {
         : await authService.login(username, password)
       login(response)
       const role = (response.role || 'user').toLowerCase()
-      navigate(role === 'admin' ? '/admin' : '/')
+      navigate(role === 'admin' ? '/admin' : role === 'warehouse' ? '/admin/warehouse' : '/')
     } catch (err) {
       setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại')
     } finally {

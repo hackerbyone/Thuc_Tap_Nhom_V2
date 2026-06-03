@@ -16,6 +16,9 @@ namespace BaseCore.Repository
         public DbSet<Cart> Carts { get; set; }
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<Review> Reviews { get; set; }
+        public DbSet<TankFishTracking> TankFishTrackings { get; set; }
+        public DbSet<Accessory> Accessories { get; set; }
+        public DbSet<InventoryCommit> InventoryCommits { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -126,6 +129,46 @@ namespace BaseCore.Repository
                       .WithMany()
                       .HasForeignKey(e => e.ProductId)
                       .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // TankFishTracking
+            modelBuilder.Entity<TankFishTracking>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.TankName).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.Property(e => e.LastUpdatedBy).HasMaxLength(100);
+                entity.Property(e => e.LastUpdatedByName).HasMaxLength(100);
+                entity.HasOne(e => e.Product)
+                      .WithMany()
+                      .HasForeignKey(e => e.ProductId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Accessory
+            modelBuilder.Entity<Accessory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+                entity.Property(e => e.Type).HasMaxLength(50);
+                entity.Property(e => e.Unit).HasMaxLength(50);
+                entity.Property(e => e.Status).HasMaxLength(50);
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100);
+                entity.Property(e => e.CreatedByName).HasMaxLength(100);
+            });
+
+            // InventoryCommit
+            modelBuilder.Entity<InventoryCommit>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.StaffId).HasMaxLength(100);
+                entity.Property(e => e.StaffName).HasMaxLength(100);
+                entity.Property(e => e.CommitMessage).HasMaxLength(500);
+                entity.Property(e => e.TargetType).HasMaxLength(50);
+                entity.Property(e => e.TargetName).HasMaxLength(200);
+                entity.Property(e => e.OldValue).HasMaxLength(1000);
+                entity.Property(e => e.NewValue).HasMaxLength(1000);
             });
         }
     }

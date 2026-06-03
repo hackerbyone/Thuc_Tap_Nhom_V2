@@ -35,10 +35,10 @@ namespace BaseCore.AuthService.Controllers
             if (user == null)
                 return Unauthorized(new { message = "Invalid username or password" });
 
+            var role = user.UserType == 1 ? "Admin" : user.UserType == 3 ? "Warehouse" : "User";
             var token = TokenHelper.GenerateToken(
                 _secretKey, TokenExpirationMinutes,
-                user.Id.ToString(), user.UserName,
-                user.UserType == 1 ? "Admin" : "User");
+                user.Id.ToString(), user.UserName, role);
 
             return Ok(new LoginResponse
             {
@@ -47,7 +47,7 @@ namespace BaseCore.AuthService.Controllers
                 Username  = user.UserName,
                 Name      = user.Name,
                 Email     = user.Email,
-                Role      = user.UserType == 1 ? "Admin" : "User",
+                Role      = role,
                 ExpiresIn = TokenExpirationMinutes * 60
             });
         }
@@ -136,10 +136,10 @@ namespace BaseCore.AuthService.Controllers
                     });
                 }
 
+                var googleRole = user.UserType == 1 ? "Admin" : user.UserType == 3 ? "Warehouse" : "User";
                 var token = TokenHelper.GenerateToken(
                     _secretKey, TokenExpirationMinutes,
-                    user.Id, user.UserName,
-                    user.UserType == 1 ? "Admin" : "User");
+                    user.Id, user.UserName, googleRole);
 
                 return Ok(new LoginResponse
                 {
@@ -148,7 +148,7 @@ namespace BaseCore.AuthService.Controllers
                     Username  = user.UserName,
                     Name      = user.Name,
                     Email     = user.Email,
-                    Role      = user.UserType == 1 ? "Admin" : "User",
+                    Role      = googleRole,
                     ExpiresIn = TokenExpirationMinutes * 60
                 });
             }

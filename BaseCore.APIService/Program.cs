@@ -184,6 +184,71 @@ using (var scope = app.Services.CreateScope())
                 CREATE UNIQUE INDEX UIX_Reviews_OrderId ON Reviews(OrderId) WHERE OrderId IS NOT NULL;
         ");
 
+        // Bảng TankFishTrackings
+        db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='TankFishTrackings')
+            BEGIN
+                CREATE TABLE TankFishTrackings (
+                    Id              int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    TankName        nvarchar(100) NOT NULL,
+                    ProductId       int NOT NULL,
+                    MaleCount       int NOT NULL DEFAULT 0,
+                    FemaleCount     int NOT NULL DEFAULT 0,
+                    Notes           nvarchar(1000) NULL,
+                    LastUpdated     datetime2 NOT NULL DEFAULT GETDATE(),
+                    LastUpdatedBy   nvarchar(100) NOT NULL DEFAULT N'',
+                    LastUpdatedByName nvarchar(100) NOT NULL DEFAULT N'',
+                    CONSTRAINT FK_TankFishTrackings_Products FOREIGN KEY (ProductId)
+                        REFERENCES Products(Id) ON DELETE RESTRICT
+                );
+            END
+        ");
+
+        // Bảng Accessories
+        db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='Accessories')
+            BEGIN
+                CREATE TABLE Accessories (
+                    Id           int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    Name         nvarchar(200) NOT NULL,
+                    Type         nvarchar(50) NOT NULL DEFAULT N'Accessory',
+                    Quantity     int NOT NULL DEFAULT 0,
+                    Unit         nvarchar(50) NULL,
+                    Status       nvarchar(50) NOT NULL DEFAULT N'Good',
+                    Description  nvarchar(1000) NULL,
+                    IsActive     bit NOT NULL DEFAULT 1,
+                    Created      datetime2 NOT NULL DEFAULT GETDATE(),
+                    Modified     datetime2 NULL,
+                    CreatedBy    nvarchar(100) NOT NULL DEFAULT N'',
+                    CreatedByName nvarchar(100) NOT NULL DEFAULT N''
+                );
+            END
+        ");
+
+        // Bảng InventoryCommits
+        db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='InventoryCommits')
+            BEGIN
+                CREATE TABLE InventoryCommits (
+                    Id            int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    StaffId       nvarchar(100) NOT NULL DEFAULT N'',
+                    StaffName     nvarchar(100) NOT NULL DEFAULT N'',
+                    CommitMessage nvarchar(500) NOT NULL DEFAULT N'',
+                    TargetType    nvarchar(50) NOT NULL DEFAULT N'',
+                    TargetId      int NULL,
+                    TargetName    nvarchar(200) NOT NULL DEFAULT N'',
+                    OldValue      nvarchar(1000) NULL,
+                    NewValue      nvarchar(1000) NULL,
+                    Created       datetime2 NOT NULL DEFAULT GETDATE()
+                );
+                CREATE INDEX IX_InventoryCommits_StaffId ON InventoryCommits(StaffId);
+                CREATE INDEX IX_InventoryCommits_Created ON InventoryCommits(Created DESC);
+            END
+        ");
+
+        // Thêm UserType 3 = Warehouse nếu cần (chỉ cần về schema, không cần migration riêng)
+        // UserType trong Users đã là int - không cần thay đổi bảng
+
         Console.WriteLine("✅ Schema update: OK");
     }
     catch (Exception ex)
