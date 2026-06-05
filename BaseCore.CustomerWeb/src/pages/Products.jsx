@@ -6,6 +6,7 @@ import ProductCard from '../components/ProductCard'
 import styles from './Products.module.css'
 
 const MAX_PRICE = 3000000
+const STEP = 10000
 
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -13,8 +14,10 @@ export default function Products() {
   const query = searchParams.get('q') || ''
 
   const [sort, setSort] = useState('default')
-  const [displayPrice, setDisplayPrice] = useState(MAX_PRICE)
-  const [maxPrice, setMaxPrice] = useState(MAX_PRICE)
+  const [minVal, setMinVal] = useState(0)
+  const [maxVal, setMaxVal] = useState(MAX_PRICE)
+  const [minPrice, setMinPrice] = useState(null)
+  const [maxPrice, setMaxPrice] = useState(null)
   const [page, setPage] = useState(1)
   const [pageSize] = useState(12)
 
@@ -25,10 +28,22 @@ export default function Products() {
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
 
+  const commitPrice = () => {
+    setMinPrice(minVal > 0 ? minVal : null)
+    setMaxPrice(maxVal < MAX_PRICE ? maxVal : null)
+  }
+
+  const resetPrice = () => {
+    setMinVal(0)
+    setMaxVal(MAX_PRICE)
+    setMinPrice(null)
+    setMaxPrice(null)
+  }
+
   // reset về page 1 khi đổi filter hoặc sort
   useEffect(() => {
     setPage(1)
-  }, [catFilter, query, sort, maxPrice])
+  }, [catFilter, query, sort, minPrice, maxPrice])
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -37,8 +52,7 @@ export default function Products() {
         const categoryId = catFilter ? parseInt(catFilter) : null
         // price-asc / price-desc sắp xếp ở server; rating sắp xếp ở client
         const serverSort = (sort === 'price-asc' || sort === 'price-desc') ? sort : null
-        const priceMax = maxPrice < MAX_PRICE ? maxPrice : null
-        const res = await productService.getAll(query, categoryId, page, pageSize, null, priceMax, serverSort)
+        const res = await productService.getAll(query, categoryId, page, pageSize, minPrice, maxPrice, serverSort)
         setProducts(res.items || [])
         setTotalCount(res.totalCount || 0)
         setTotalPages(res.totalPages || Math.ceil((res.totalCount || 0) / pageSize))
@@ -49,7 +63,7 @@ export default function Products() {
       }
     }
     fetchProducts()
-  }, [query, catFilter, page, sort, maxPrice])
+  }, [query, catFilter, page, sort, minPrice, maxPrice])
 
   useEffect(() => {
     categoryService.getAll()
@@ -96,19 +110,46 @@ export default function Products() {
           </div>
 
           <div className={styles.filterGroup}>
-            <h3>Giá tối đa</h3>
-            <input
-              type="range" min={10000} max={MAX_PRICE} step={10000}
-              value={displayPrice}
-              onChange={e => setDisplayPrice(+e.target.value)}
-              onMouseUp={e => setMaxPrice(+e.target.value)}
-              onTouchEnd={e => setMaxPrice(+e.target.value)}
-              className={styles.range}
-            />
-            <div className={styles.rangeLabel}>
-              <span>0đ</span>
-              <span>{displayPrice.toLocaleString('vi-VN')}đ</span>
+            <h3>Khoảng giá</h3>
+            <div className={styles.dualRange}>
+              <div className={styles.dualRangeTrack}>
+                <div
+                  className={styles.dualRangeFill}
+                  style={{
+                    left: `${(minVal / MAX_PRICE) * 100}%`,
+                    width: `${((maxVal - minVal) / MAX_PRICE) * 100}%`
+                  }}
+                />
+              </div>
+              <input
+                type="range"
+                min={0} max={MAX_PRICE} step={STEP}
+                value={minVal}
+                onChange={e => setMinVal(Math.min(+e.target.value, maxVal - STEP))}
+                onMouseUp={commitPrice}
+                onTouchEnd={commitPrice}
+                className={styles.rangeInput}
+                style={{ zIndex: minVal >= maxVal - STEP ? 5 : undefined }}
+              />
+              <input
+                type="range"
+                min={0} max={MAX_PRICE} step={STEP}
+                value={maxVal}
+                onChange={e => setMaxVal(Math.max(+e.target.value, minVal + STEP))}
+                onMouseUp={commitPrice}
+                onTouchEnd={commitPrice}
+                className={styles.rangeInput}
+              />
             </div>
+            <div className={styles.rangeLabels}>
+              <span>{minVal > 0 ? minVal.toLocaleString('vi-VN') + 'đ' : '0đ'}</span>
+              <span>{maxVal.toLocaleString('vi-VN')}đ</span>
+            </div>
+            {(minPrice != null || maxPrice != null) && (
+              <button className={styles.clearPriceBtn} onClick={resetPrice}>
+                Xóa bộ lọc giá
+              </button>
+            )}
           </div>
         </aside>
 
