@@ -63,6 +63,19 @@ namespace BaseCore.APIService.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
+            if (page < 1)
+                return BadRequest(new { message = "page must be greater than or equal to 1" });
+            if (pageSize < 1)
+                return BadRequest(new { message = "pageSize must be greater than 0" });
+            if (pageSize > 200)
+                return BadRequest(new { message = "pageSize must be less than or equal to 200" });
+            if (minPrice.HasValue && minPrice < 0)
+                return BadRequest(new { message = "Giá tối thiểu không được âm" });
+            if (maxPrice.HasValue && maxPrice < 0)
+                return BadRequest(new { message = "Giá tối đa không được âm" });
+            if (minPrice.HasValue && maxPrice.HasValue && minPrice > maxPrice)
+                return BadRequest(new { message = "minPrice must be less than or equal to maxPrice" });
+
             var (products, totalCount) = await _productRepository.SearchAsync(
                 keyword, categoryId, minPrice, maxPrice, sortBy, page, pageSize);
 
