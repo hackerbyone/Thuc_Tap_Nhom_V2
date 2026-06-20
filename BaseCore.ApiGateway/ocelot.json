@@ -159,15 +159,6 @@
       "UpstreamHttpMethod": [ "GET", "DELETE", "OPTIONS" ]
     },
     {
-      "DownstreamPathTemplate": "/api/vnpay/{everything}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        { "Host": "localhost", "Port": 5001 }
-      ],
-      "UpstreamPathTemplate": "/api/vnpay/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ]
-    },
-    {
       "DownstreamPathTemplate": "/api/statistics/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [

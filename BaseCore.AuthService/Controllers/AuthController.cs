@@ -2,8 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using BaseCore.Common;
 using BaseCore.Entities;
 using BaseCore.Services.Authen;
-using System.Net.Http.Headers;
-using System.Text.Json;
 
 namespace BaseCore.AuthService.Controllers
 {
@@ -12,15 +10,13 @@ namespace BaseCore.AuthService.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IUserService _userService;
-        private readonly IHttpClientFactory _httpClientFactory;
         private readonly string _secretKey;
         private const int TokenExpirationMinutes = 480;
 
-        public AuthController(IUserService userService, IConfiguration configuration, IHttpClientFactory httpClientFactory)
+        public AuthController(IUserService userService, IConfiguration configuration)
         {
-            _userService        = userService;
-            _httpClientFactory  = httpClientFactory;
-            _secretKey          = configuration["Jwt:SecretKey"]
+            _userService = userService;
+            _secretKey   = configuration["Jwt:SecretKey"]
                 ?? configuration["AppSettings:Secret"]
                 ?? "YourSecretKeyForAuthenticationShouldBeLongEnough";
         }
@@ -97,78 +93,6 @@ namespace BaseCore.AuthService.Controllers
             }
         }
 
-        // Đăng nhập bằng Google — nhận access_token từ frontend, verify qua Google API
-        [HttpPost("google")]
-        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
-        {
-            if (string.IsNullOrWhiteSpace(request?.AccessToken))
-                return BadRequest(new { message = "Access token là bắt buộc" });
-
-            try
-            {
-                // Gọi Google userinfo endpoint để xác thực access token
-                var http = _httpClientFactory.CreateClient();
-                http.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", request.AccessToken);
-
-                var googleResponse = await http.GetAsync("https://www.googleapis.com/oauth2/v3/userinfo");
-                if (!googleResponse.IsSuccessStatusCode)
-                    return Unauthorized(new { message = "Google token không hợp lệ hoặc đã hết hạn" });
-
-                var json     = await googleResponse.Content.ReadAsStringAsync();
-                var userInfo = JsonSerializer.Deserialize<GoogleUserInfo>(json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                if (string.IsNullOrEmpty(userInfo?.Email))
-                    return BadRequest(new { message = "Không lấy được email từ Google" });
-
-                // Tìm hoặc tạo user theo email Google
-                var user = await _userService.GetByEmail(userInfo.Email);
-                if (user == null)
-                {
-                    user = await _userService.CreateGoogleUser(new User
-                    {
-                        UserName = userInfo.Email,
-                        Name     = userInfo.Name ?? userInfo.Email,
-                        Email    = userInfo.Email,
-                        Phone    = "",
-                        UserType = 2,
-                    });
-                }
-
-                var googleRole = user.UserType == 1 ? "Admin" : user.UserType == 3 ? "Warehouse" : "User";
-                var token = TokenHelper.GenerateToken(
-                    _secretKey, TokenExpirationMinutes,
-                    user.Id, user.UserName, googleRole);
-
-                return Ok(new LoginResponse
-                {
-                    Token     = token,
-                    UserId    = user.Id,
-                    Username  = user.UserName,
-                    Name      = user.Name,
-                    Email     = user.Email,
-                    Role      = googleRole,
-                    ExpiresIn = TokenExpirationMinutes * 60
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = "Đăng nhập Google thất bại: " + ex.Message });
-            }
-        }
-    }
-
-    public class GoogleLoginRequest
-    {
-        public string AccessToken { get; set; } = "";
-    }
-
-    public class GoogleUserInfo
-    {
-        public string Email { get; set; } = "";
-        public string Name  { get; set; } = "";
-        public string Sub   { get; set; } = "";
     }
 
     public class LoginRequest

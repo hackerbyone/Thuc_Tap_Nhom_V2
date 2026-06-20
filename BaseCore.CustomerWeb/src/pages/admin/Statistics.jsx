@@ -80,11 +80,11 @@ export default function Statistics() {
           ) : (
             <>
               {/* KPI Cards */}
-              <div className="row">
+              <div className="row stats-kpi-row">
                 <div className="col-lg-3 col-6">
                   <div className="small-box bg-success">
                     <div className="inner">
-                      <h3 style={{ fontSize: '1.3rem' }}>{fmt(summary?.thisMonthRevenue)}</h3>
+                      <h3>{fmt(summary?.thisMonthRevenue)}</h3>
                       <p>Doanh thu tháng này</p>
                     </div>
                     <div className="icon"><i className="fas fa-chart-line"></i></div>

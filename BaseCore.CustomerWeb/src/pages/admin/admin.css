@@ -433,6 +433,38 @@ section.content {
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16) !important;
 }
 
+.stats-kpi-row {
+  align-items: stretch;
+}
+
+.stats-kpi-row > [class*="col-"] {
+  display: flex;
+  margin-bottom: 1rem;
+}
+
+.stats-kpi-row .small-box {
+  width: 100%;
+  min-height: 118px;
+  margin-bottom: 0 !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.stats-kpi-row .small-box .inner {
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.stats-kpi-row .small-box .inner h3 {
+  max-width: calc(100% - 58px);
+  margin-bottom: 0.35rem;
+  overflow-wrap: anywhere;
+  line-height: 1.08;
+}
+
 .small-box .inner h3,
 .small-box .inner h4 {
   font-weight: 700 !important;

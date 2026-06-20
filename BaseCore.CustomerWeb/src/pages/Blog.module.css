@@ -14,5 +14,7 @@
 .body { padding: 1.5rem; }
 .meta { display: flex; gap: 12px; font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
 .body h2 { font-size: 18px; font-weight: 500; line-height: 1.4; margin-bottom: 8px; }
+.titleLink { color: var(--text); text-decoration: none; }
+.titleLink:hover { color: var(--teal); }
 .body p { font-size: 14px; color: var(--text-muted); line-height: 1.7; margin-bottom: 1rem; }
 .link { font-size: 14px; font-weight: 500; color: var(--teal); }

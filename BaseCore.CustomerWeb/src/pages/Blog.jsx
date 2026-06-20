@@ -63,7 +63,7 @@ export default function Blog() {
           <div className={styles.grid}>
             {posts.map(post => (
               <article key={post.id} className={styles.card}>
-                <div className={styles.img}>
+                <Link to={`/blog/${post.id}`} className={styles.img}>
                   {/* Cập nhật imageUrl theo chuẩn SQL Server */}
                   <img
                     src={post.imageUrl || '/placeholder.jpg'}
@@ -71,14 +71,16 @@ export default function Blog() {
                     onError={e => { e.target.src = '/placeholder.jpg' }}
                   />
                   <span className={styles.tag}>Tin tức</span>
-                </div>
+                </Link>
                 <div className={styles.body}>
                   <div className={styles.meta}>
                     {/* Đổi createdAt thành publishDate */}
                     {post.publishDate && <span>📅 {new Date(post.publishDate).toLocaleDateString('vi-VN')}</span>}
                     <span>✍️ {post.author || 'Admin'}</span>
                   </div>
-                  <h2>{post.title}</h2>
+                  <h2>
+                    <Link to={`/blog/${post.id}`} className={styles.titleLink}>{post.title}</Link>
+                  </h2>
                   {/* Hiển thị shortDescription */}
                   <p>{post.shortDescription || (post.content && post.content.slice(0, 120) + '...')}</p>
                   

@@ -24,6 +24,7 @@ export default function Cart() {
   })
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState(null)
+  const [stockNotice, setStockNotice] = useState('')
 
   useEffect(() => {
     if (user) {
@@ -35,6 +36,10 @@ export default function Cart() {
     }
   }, [user])
 
+  useEffect(() => {
+    if (error) setStockNotice(error)
+  }, [error])
+
   const handleClearName = () => {
     setCheckoutData(prev => ({ ...prev, customerName: '' }))
   }
@@ -44,6 +49,29 @@ export default function Cart() {
   }
 
   const selectedProvince = PROVINCES.find(p => p.name === checkoutData.province)
+
+  const hasStockLimit = (item) =>
+    item.availableStock !== null && item.availableStock !== undefined
+
+  const getStockUnit = (item) => {
+    if (item.selectedGender === 'Cặp') return 'cặp'
+    if (item.selectedGender) return `con ${item.selectedGender.toLowerCase()}`
+    return 'sản phẩm'
+  }
+
+  const getStockLimitMessage = (item) => {
+    const unit = getStockUnit(item)
+    return `Chỉ còn ${item.availableStock} ${unit} trong kho. Bạn không thể tăng thêm số lượng cho sản phẩm này.`
+  }
+
+  const increaseQuantity = (item) => {
+    if (hasStockLimit(item) && item.quantity >= item.availableStock) {
+      setStockNotice(getStockLimitMessage(item))
+      return
+    }
+    setStockNotice('')
+    setQty(item.id, item.quantity + 1)
+  }
 
   const shipping = total >= 500000 ? 0 : 35000
   const grandTotal = total + shipping
@@ -102,7 +130,7 @@ export default function Cart() {
     navigate(`/payment/${checkoutResult.orderId}`, { state: { order: checkoutResult } })
   }
 
-  if (isLoading) return (
+  if (isLoading && cart.length === 0) return (
     <main className={styles.page}>
       <div className={styles.container}>
         <div className={styles.empty}>
@@ -112,7 +140,7 @@ export default function Cart() {
     </main>
   )
 
-  if (error) return (
+  if (error && cart.length === 0) return (
     <main className={styles.page}>
       <div className={styles.container}>
         <div className={styles.empty}>
@@ -145,6 +173,12 @@ export default function Cart() {
           <h1>Giỏ hàng của bạn</h1>
           <span>{cart.reduce((s, i) => s + i.quantity, 0)} sản phẩm</span>
         </div>
+
+        {stockNotice && (
+          <div className={styles.stockNotice}>
+            {stockNotice}
+          </div>
+        )}
 
         <div className={styles.layout}>
           {/* Cart items */}
@@ -191,10 +225,23 @@ export default function Cart() {
                   )}
                 </span>
 
-                <div className={styles.qtyControl}>
-                  <button onClick={() => item.quantity === 1 ? remove(item.id) : setQty(item.id, item.quantity - 1)}>−</button>
-                  <span>{item.quantity}</span>
-                  <button onClick={() => setQty(item.id, item.quantity + 1)}>+</button>
+                <div className={styles.quantityCell}>
+                  <div className={styles.qtyControl}>
+                    <button onClick={() => item.quantity === 1 ? remove(item.id) : setQty(item.id, item.quantity - 1)}>−</button>
+                    <span>{item.quantity}</span>
+                    <button
+                      onClick={() => increaseQuantity(item)}
+                      className={hasStockLimit(item) && item.quantity >= item.availableStock ? styles.limitBtn : ''}
+                      title={hasStockLimit(item) ? `Tối đa ${item.availableStock} ${getStockUnit(item)}` : 'Tăng số lượng'}
+                    >
+                      +
+                    </button>
+                  </div>
+                  {hasStockLimit(item) && (
+                    <small className={styles.stockHint}>
+                      Tối đa {item.availableStock} {getStockUnit(item)}
+                    </small>
+                  )}
                 </div>
 
                 <span className={styles.itemTotal}>{formatPrice(item.price * item.quantity)}</span>

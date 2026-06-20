@@ -4,8 +4,6 @@ import { useAuth } from '../context/AuthContext'
 import { orderService } from '../services/order/orderService'
 import styles from './Payment.module.css'
 
-const VNPAY_LOGO = 'https://sandbox.vnpayment.vn/apis/assets/images/logo_vnpay.png'
-
 const ACCOUNT_NO   = '0827027392472'
 const ACCOUNT_NAME = 'SHOP CA CANH'
 const BANK_NAME    = 'MBBank (Ngân hàng Quân đội)'
@@ -45,8 +43,6 @@ export default function Payment() {
   const [status, setStatus]           = useState(initialData?.status || 'WaitingDeposit')
   const [cancelling, setCancelling]   = useState(false)
   const [cancelError, setCancelError] = useState(null)
-  const [vnpayLoading, setVnpayLoading] = useState(false)
-  const [vnpayError, setVnpayError]     = useState(null)
 
   /* Giá trị hiển thị — ưu tiên order đã fetch, fallback initialData */
   const depositAmount  = order?.depositAmount  ?? initialData?.depositAmount  ?? 0
@@ -123,18 +119,6 @@ export default function Payment() {
     navigator.clipboard.writeText(text).catch(() => {})
     setCopied(key)
     setTimeout(() => setCopied(null), 2000)
-  }
-
-  const handleVnpayPayment = async () => {
-    try {
-      setVnpayLoading(true)
-      setVnpayError(null)
-      const data = await orderService.createVnpayUrl(orderId)
-      window.location.href = data.paymentUrl
-    } catch (err) {
-      setVnpayError(err.message || 'Không thể tạo liên kết VNPay')
-      setVnpayLoading(false)
-    }
   }
 
   const handleCancel = async () => {
@@ -257,33 +241,6 @@ export default function Payment() {
                 {copied === 'ref' ? '✓ Đã copy' : '📋 Copy nội dung'}
               </button>
             </div>
-
-            {/* Thanh toán VNPay */}
-            {status === 'WaitingDeposit' && !isExpired && (
-              <div className={styles.vnpaySection}>
-                <div className={styles.vnpayOrDivider}>— hoặc đặt cọc nhanh qua —</div>
-                {vnpayError && <div className={styles.vnpayError}>{vnpayError}</div>}
-                <button
-                  className={styles.vnpayBtn}
-                  onClick={handleVnpayPayment}
-                  disabled={vnpayLoading}
-                >
-                  {vnpayLoading ? (
-                    <span>Đang chuyển hướng...</span>
-                  ) : (
-                    <>
-                      <img src="https://vnpay.vn/s1/statics/img/logo-vi.png"
-                        alt="VNPay" className={styles.vnpayLogo}
-                        onError={e => { e.target.style.display='none' }} />
-                      Thanh toán qua VNPay
-                    </>
-                  )}
-                </button>
-                <p className={styles.vnpayNote}>
-                  Hỗ trợ: ATM, Visa/Master, Internet Banking, Ví điện tử
-                </p>
-              </div>
-            )}
 
           </div>
 

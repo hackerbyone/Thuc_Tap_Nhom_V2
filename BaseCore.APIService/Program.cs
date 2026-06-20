@@ -76,7 +76,6 @@ builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<IVnPayService, VnPayService>();
 
 builder.Services.AddDbContext<MySqlDbContext>(options =>
 {
