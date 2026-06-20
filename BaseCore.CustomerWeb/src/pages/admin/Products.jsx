@@ -69,6 +69,7 @@ const Products = () => {
         }
     };
 
+
     const handleSearch = (e) => {
         e.preventDefault();
         setPage(1);
@@ -322,7 +323,7 @@ const Products = () => {
                                                             <td><strong>{product.name}</strong></td>
                                                             <td>
                                                                 <span className="badge badge-light" style={{ background: '#e8f4fd', color: '#3d8bc2', border: '1px solid #a8d5f0' }}>
-                                                                    {product.category?.name || 'N/A'}
+                                                                    {categories.find(cat => cat.id === product.categoryId)?.name || product.category?.name || '—'}
                                                                 </span>
                                                             </td>
                                                             <td className="font-weight-bold text-danger">
