@@ -48,6 +48,7 @@ namespace BaseCore.APIService.Controllers
             p.Id, p.Name, p.Price, p.PairPrice, p.Stock,
             p.ImageUrl, p.Description, p.CareInstructions, p.Environment,
             p.MaleStock, p.FemaleStock, p.CategoryId,
+            categoryName = p.Category != null ? p.Category.Name : null,
             rating, reviews
         };
 
