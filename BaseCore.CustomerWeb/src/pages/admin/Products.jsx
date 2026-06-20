@@ -69,6 +69,13 @@ const Products = () => {
         }
     };
 
+    const getProductCategoryName = (product) => {
+        if (product.categoryName) return product.categoryName;
+        if (product.category?.name) return product.category.name;
+
+        const category = categories.find(cat => String(cat.id) === String(product.categoryId));
+        return category?.name || 'Chưa phân loại';
+    };
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -323,7 +330,7 @@ const Products = () => {
                                                             <td><strong>{product.name}</strong></td>
                                                             <td>
                                                                 <span className="badge badge-light" style={{ background: '#e8f4fd', color: '#3d8bc2', border: '1px solid #a8d5f0' }}>
-                                                                    {categories.find(cat => cat.id === product.categoryId)?.name || product.category?.name || '—'}
+                                                                    {getProductCategoryName(product)}
                                                                 </span>
                                                             </td>
                                                             <td className="font-weight-bold text-danger">
