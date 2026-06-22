@@ -11,6 +11,12 @@ function formatPrice(n) {
   return (n ?? 0).toLocaleString('vi-VN') + 'đ';
 }
 
+function parseUtcDate(d) {
+  if (!d) return new Date(NaN)
+  const s = typeof d === 'string' && !d.endsWith('Z') && !d.includes('+') ? d + 'Z' : d
+  return new Date(s)
+}
+
 export default function OrderHistory() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -174,7 +180,7 @@ export default function OrderHistory() {
                           </span>
                         )}
                       </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>{new Date(order.orderDate).toLocaleString('vi-VN')}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{parseUtcDate(order.orderDate).toLocaleString('vi-VN')}</td>
                       <td className={styles.totalAmount}>{formatPrice(order.totalAmount)}</td>
                       <td>{renderStatus(order.status)}</td>
                       {/* FIX 6+7: fix lệch - dùng div flex wrap, thêm nút Theo dõi đơn hàng */}
