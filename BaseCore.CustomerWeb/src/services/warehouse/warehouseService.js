@@ -2,7 +2,7 @@ import { buildUrl, getHeaders, handleResponse } from '../utils/apiClient';
 
 export const warehouseService = {
   // Bể cá
-  getTanks: async (keyword = '', page = 1, pageSize = 20) => {
+  getTanks: async (keyword = '', page = 1, pageSize = 21) => {
     const params = { page, pageSize };
     if (keyword) params.keyword = keyword;
     const res = await fetch(buildUrl('/api/warehouse/tanks', params), { headers: getHeaders() });
