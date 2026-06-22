@@ -49,7 +49,7 @@ export default function Payment() {
   const totalAmount    = order?.totalAmount    ?? initialData?.totalAmount    ?? 0
   const customerName   = order?.customerName   ?? initialData?.customerName   ?? ''
   const customerPhone  = order?.customerPhone  ?? initialData?.customerPhone  ?? ''
-  const shippingAddr   = order?.shippingAddress ?? ''
+  const shippingAddr   = order?.shippingAddress ?? initialData?.shippingAddress ?? ''
   const paymentRef     = `COC DON ${orderId}`
 
   /* ─── Fetch đơn hàng sau khi auth xong ─── */
@@ -78,7 +78,9 @@ export default function Payment() {
   useEffect(() => {
     const d = order?.orderDate
     if (!d) return
-    const deadline = new Date(d).getTime() + 24 * 3600 * 1000
+    // Nếu server trả về không có 'Z' hoặc offset → ép parse UTC để tránh lệch múi giờ
+    const utcStr = typeof d === 'string' && !d.endsWith('Z') && !d.includes('+') ? d + 'Z' : d
+    const deadline = new Date(utcStr).getTime() + 24 * 3600 * 1000
     const tick = () => {
       const remaining = deadline - Date.now()
       setTimeLeft(remaining)

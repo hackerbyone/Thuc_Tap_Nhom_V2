@@ -34,6 +34,7 @@ export default function ProductDetail() {
         const res = await productService.getById(parseInt(id))
         setProduct(res)
         setSelectedGender(null)
+        setQty(1)
 
         if (res.categoryId) {
           const allProducts = await productService.getAll('', res.categoryId, 1, 10)

@@ -12,8 +12,6 @@ export default function Cart() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [showCheckout, setShowCheckout] = useState(false)
-  const [checkoutStep, setCheckoutStep] = useState(1)   // 1 = nhập thông tin, 2 = xác nhận cọc
-  const [checkoutResult, setCheckoutResult] = useState(null) // kết quả từ backend
   const [checkoutData, setCheckoutData] = useState({
     customerName: '',
     customerPhone: '',
@@ -102,16 +100,12 @@ export default function Cart() {
   }
 
   const openCheckoutModal = () => {
-    setCheckoutStep(1)
-    setCheckoutResult(null)
     setCheckoutError(null)
     setShowCheckout(true)
   }
 
   const closeCheckoutModal = () => {
     setShowCheckout(false)
-    setCheckoutStep(1)
-    setCheckoutResult(null)
     setCheckoutError(null)
   }
 
@@ -134,21 +128,14 @@ export default function Cart() {
         checkoutData.customerPhone,
         shipping
       )
-      clear()
+      await clear()
       closeCheckoutModal()
-      // Tự động chuyển sang trang thanh toán cọc ngay sau khi đặt hàng thành công
       navigate(`/payment/${result.orderId}`, { state: { order: result } })
     } catch (err) {
       setCheckoutError(err.message)
     } finally {
       setCheckoutLoading(false)
     }
-  }
-
-  const goToPayment = () => {
-    if (!checkoutResult) return
-    closeCheckoutModal()
-    navigate(`/payment/${checkoutResult.orderId}`, { state: { order: checkoutResult } })
   }
 
   if (isLoading && cart.length === 0) return (
@@ -315,16 +302,13 @@ export default function Cart() {
 
         {/* Checkout Modal */}
         {showCheckout && (
-          <div className={styles.modal} onClick={checkoutStep === 1 ? closeCheckoutModal : undefined}>
+          <div className={styles.modal} onClick={closeCheckoutModal}>
             <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
 
-              {/* ── STEP 1: Nhập thông tin ── */}
-              {checkoutStep === 1 && (
-                <>
-                  <div className={styles.modalHeader}>
-                    <h2>📋 Thông tin đặt hàng</h2>
-                    <button className={styles.closeBtn} onClick={closeCheckoutModal}>✕</button>
-                  </div>
+              <div className={styles.modalHeader}>
+                <h2>📋 Thông tin đặt hàng</h2>
+                <button className={styles.closeBtn} onClick={closeCheckoutModal}>✕</button>
+              </div>
 
                   <div className={styles.formGroup}>
                     <label>Tên khách hàng *</label>
@@ -417,62 +401,6 @@ export default function Cart() {
                       {checkoutLoading ? 'Đang xử lý...' : 'Xác nhận đặt hàng →'}
                     </button>
                   </div>
-                </>
-              )}
-
-              {/* ── STEP 2: Đặt hàng thành công → nhắc đặt cọc ── */}
-              {checkoutStep === 2 && checkoutResult && (
-                <>
-                  <div className={styles.modalHeader}>
-                    <h2>✅ Đặt hàng thành công!</h2>
-                    <button className={styles.closeBtn} onClick={closeCheckoutModal}>✕</button>
-                  </div>
-
-                  <div style={{ textAlign: 'center', padding: '0.5rem 0 1rem' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎉</div>
-                    <p style={{ fontSize: '1rem', color: '#333', marginBottom: '0.25rem' }}>
-                      Đơn hàng <strong>#{checkoutResult.orderId}</strong> đã được tạo thành công!
-                    </p>
-                    <p style={{ fontSize: '0.9rem', color: '#666' }}>
-                      Vui lòng hoàn tất bước đặt cọc để xác nhận đơn hàng
-                    </p>
-                  </div>
-
-                  {/* Tóm tắt số tiền */}
-                  <div style={{ background: '#f9f9f9', border: '1px solid #e0e0e0', borderRadius: 8, padding: '1rem', marginBottom: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                      <span style={{ color: '#555' }}>Tổng đơn hàng:</span>
-                      <strong>{formatPrice(checkoutResult.totalAmount)}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#555' }}>Cần đặt cọc ngay (50%):</span>
-                      <strong style={{ color: '#e65100', fontSize: '1.1rem' }}>{formatPrice(checkoutResult.depositAmount)}</strong>
-                    </div>
-                    <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: '#fff3e0', borderRadius: 4, fontSize: '0.8rem', color: '#bf360c' }}>
-                      ⏰ Đơn hàng tự huỷ sau <strong>24 giờ</strong> nếu chưa nhận được cọc
-                    </div>
-                  </div>
-
-                  <div className={styles.modalFooter} style={{ flexDirection: 'column', gap: '0.5rem' }}>
-                    {/* Nút chính: đến trang thanh toán */}
-                    <button
-                      className={styles.submitBtn}
-                      onClick={goToPayment}
-                      style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', background: '#e65100' }}
-                    >
-                      💳 Thanh toán cọc ngay → {formatPrice(checkoutResult.depositAmount)}
-                    </button>
-                    {/* Nút phụ: để sau */}
-                    <button
-                      className={styles.cancelBtn}
-                      onClick={closeCheckoutModal}
-                      style={{ width: '100%', textAlign: 'center' }}
-                    >
-                      Để sau — xem trong Lịch sử đơn hàng
-                    </button>
-                  </div>
-                </>
-              )}
 
             </div>
           </div>

@@ -84,7 +84,7 @@ export default function Header() {
           {user ? (
             <div className={styles.userMenu}>
               <button className={styles.userBtn} onClick={() => setUserMenuOpen(!userMenuOpen)}>
-                👤 {user.name}
+                👤 {user.name || user.username}
               </button>
               {userMenuOpen && (
                 <div className={styles.userDropdown}>
