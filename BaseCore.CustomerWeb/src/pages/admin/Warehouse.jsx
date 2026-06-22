@@ -18,6 +18,7 @@ export default function Warehouse() {
   const [tankPage, setTankPage]         = useState(1);
   const [tankKeyword, setTankKeyword]   = useState('');
   const [tanksLoading, setTanksLoading] = useState(false);
+  const [tanksError, setTanksError]     = useState('');
 
   // Phụ kiện state
   const [accessories, setAccessories]         = useState([]);
@@ -26,6 +27,7 @@ export default function Warehouse() {
   const [accKeyword, setAccKeyword]           = useState('');
   const [accType, setAccType]                 = useState('');
   const [accLoading, setAccLoading]           = useState(false);
+  const [accError, setAccError]               = useState('');
 
   // Commit log state
   const [commits, setCommits]         = useState([]);
@@ -87,21 +89,23 @@ export default function Warehouse() {
 
   const loadTanks = async () => {
     setTanksLoading(true);
+    setTanksError('');
     try {
       const res = await warehouseService.getTanks(tankKeyword, tankPage);
       setTanks(res.items || []);
       setTanksTotal(res.total || 0);
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); setTanksError(e.message || 'Không thể tải danh sách bể cá'); }
     finally { setTanksLoading(false); }
   };
 
   const loadAccessories = async () => {
     setAccLoading(true);
+    setAccError('');
     try {
       const res = await warehouseService.getAccessories(accKeyword, accType, accPage);
       setAccessories(res.items || []);
       setAccTotal(res.total || 0);
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); setAccError(e.message || 'Không thể tải danh sách phụ kiện'); }
     finally { setAccLoading(false); }
   };
 
@@ -337,9 +341,14 @@ export default function Warehouse() {
                   </button>
                 </form>
 
+                {tanksError && (
+                  <div className="alert alert-danger">
+                    <i className="fas fa-exclamation-circle mr-2"></i>{tanksError}
+                  </div>
+                )}
                 {tanksLoading ? (
                   <div className="text-center py-4"><i className="fas fa-spinner fa-spin fa-2x"></i></div>
-                ) : tanks.length === 0 ? (
+                ) : !tanksError && tanks.length === 0 ? (
                   <div className="text-center text-muted py-4">Chưa có bể nào. Hãy thêm bể đầu tiên!</div>
                 ) : (
                   <div className="row">
@@ -433,9 +442,14 @@ export default function Warehouse() {
                   </button>
                 </div>
 
+                {accError && (
+                  <div className="alert alert-danger">
+                    <i className="fas fa-exclamation-circle mr-2"></i>{accError}
+                  </div>
+                )}
                 {accLoading ? (
                   <div className="text-center py-4"><i className="fas fa-spinner fa-spin fa-2x"></i></div>
-                ) : accessories.length === 0 ? (
+                ) : !accError && accessories.length === 0 ? (
                   <div className="text-center text-muted py-4">Chưa có dữ liệu</div>
                 ) : (
                   <table className="table table-bordered table-hover table-sm">

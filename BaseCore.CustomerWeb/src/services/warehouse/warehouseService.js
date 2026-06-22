@@ -5,7 +5,7 @@ export const warehouseService = {
   getTanks: async (keyword = '', page = 1, pageSize = 21) => {
     const params = { page, pageSize };
     if (keyword) params.keyword = keyword;
-    const res = await fetch(buildUrl('/api/warehouse/tanks', params), { headers: getHeaders() });
+    const res = await fetch(buildUrl('/api/warehouse/tanks', params), { headers: getHeaders(true) });
     return handleResponse(res, 'Không thể tải danh sách bể cá');
   },
 
@@ -40,7 +40,7 @@ export const warehouseService = {
     const params = { page, pageSize };
     if (keyword) params.keyword = keyword;
     if (type) params.type = type;
-    const res = await fetch(buildUrl('/api/warehouse/accessories', params), { headers: getHeaders() });
+    const res = await fetch(buildUrl('/api/warehouse/accessories', params), { headers: getHeaders(true) });
     return handleResponse(res, 'Không thể tải danh sách phụ kiện');
   },
 
@@ -112,7 +112,7 @@ export const warehouseService = {
     const params = { groupBy };
     if (from) params.from = from;
     if (to)   params.to   = to;
-    const res = await fetch(buildUrl('/api/warehouse/report', params), { headers: getHeaders() });
+    const res = await fetch(buildUrl('/api/warehouse/report', params), { headers: getHeaders(true) });
     return handleResponse(res, 'Không thể tải báo cáo hao hụt');
   },
 };
