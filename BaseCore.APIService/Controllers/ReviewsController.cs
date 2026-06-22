@@ -110,8 +110,10 @@ namespace BaseCore.APIService.Controllers
             if (alreadyReviewed)
                 return BadRequest(new { message = "Đơn hàng này đã được đánh giá rồi" });
 
-            // ProductId lấy từ sản phẩm đầu tiên trong đơn hàng
-            var productId = orderDetails[0].ProductId;
+            // Dùng productId từ request nếu hợp lệ (có trong đơn), nếu không thì dùng sản phẩm đầu tiên
+            var productId = (dto.ProductId.HasValue && orderDetails.Any(d => d.ProductId == dto.ProductId.Value))
+                ? dto.ProductId.Value
+                : orderDetails[0].ProductId;
 
             var user = await _context.Users.FindAsync(userId);
 

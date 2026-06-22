@@ -9,7 +9,7 @@ namespace BaseCore.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Warehouse")]
     public class WarehouseController : ControllerBase
     {
         private readonly MySqlDbContext _context;

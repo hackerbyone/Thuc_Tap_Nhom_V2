@@ -112,10 +112,10 @@ namespace BaseCore.APIService.Controllers
         }
 
         /// <summary>
-        /// Create new product (requires authentication)
+        /// Create new product (requires Admin role)
         /// </summary>
         [HttpPost]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] ProductCreateDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Name))
@@ -182,10 +182,10 @@ namespace BaseCore.APIService.Controllers
         }
 
         /// <summary>
-        /// Update product (requires authentication)
+        /// Update product (requires Admin role)
         /// </summary>
         [HttpPut("{id}")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] ProductUpdateDto dto)
         {
             var product = await _productRepository.GetByIdAsync(id);
@@ -237,10 +237,10 @@ namespace BaseCore.APIService.Controllers
         }
 
         /// <summary>
-        /// Delete product (requires authentication)
+        /// Delete product (requires Admin role)
         /// </summary>
         [HttpDelete("{id}")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var product = await _productRepository.GetByIdAsync(id);

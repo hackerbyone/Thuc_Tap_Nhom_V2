@@ -146,12 +146,42 @@ namespace BaseCore.APIService.Controllers
             return Ok(orders);
         }
 
-        // Lấy chi tiết đơn hàng
+        // Admin: lấy đơn hàng của một user cụ thể (kèm items)
+        [HttpGet("user/{userId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetOrdersByUser(string userId)
+        {
+            var orders = await _orderRepository.GetByUserAsync(userId);
+            var result = new List<object>();
+            foreach (var o in orders)
+            {
+                var details = await _orderDetailRepository.GetByOrderAsync(o.Id);
+                result.Add(new
+                {
+                    o.Id, o.OrderDate, o.TotalAmount, o.DepositAmount,
+                    o.Status, o.ShippingAddress, o.CustomerName, o.CustomerPhone,
+                    items = details.Select(d => new
+                    {
+                        d.ProductId,
+                        productName  = d.Product?.Name ?? "Sản phẩm",
+                        productImage = d.Product?.ImageUrl,
+                        d.Quantity, d.UnitPrice, d.SelectedGender,
+                    }).ToList()
+                });
+            }
+            return Ok(result);
+        }
+
+        // Lấy chi tiết đơn hàng — user chỉ xem được đơn của mình, Admin xem được tất cả
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
             var order = await _orderRepository.GetByIdAsync(id);
             if (order == null) return NotFound(new { message = "Order not found" });
+
+            var currentUserId = GetUserId();
+            if (!User.IsInRole("Admin") && order.UserId != currentUserId)
+                return Forbid();
 
             // Auto-cancel nếu quá 24h
             await CheckAndAutoCancelOrder(order);
@@ -266,7 +296,7 @@ namespace BaseCore.APIService.Controllers
             return Ok(order);
         }
 
-        // Huỷ đơn — chỉ khi đang WaitingDeposit (chưa thanh toán)
+        // Huỷ đơn — chỉ khi đang WaitingDeposit (chưa thanh toán), user chỉ hủy đơn của mình
         [HttpPut("{id}/cancel")]
         public async Task<IActionResult> CancelOrder(int id)
         {
@@ -276,7 +306,8 @@ namespace BaseCore.APIService.Controllers
             var order = await _orderRepository.GetByIdAsync(id);
             if (order == null) return NotFound(new { message = "Order not found" });
 
-            if (order.UserId != userId && !User.IsInRole("Admin"))
+            var currentUserId = GetUserId();
+            if (!User.IsInRole("Admin") && order.UserId != currentUserId)
                 return Forbid();
 
             if (order.Status == "Cancelled")

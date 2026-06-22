@@ -394,19 +394,20 @@ export default function Orders() {
                               <button className="btn btn-sm btn-outline-primary mr-1" onClick={() => openDetail(order)} title="Xem chi tiết">
                                 <i className="fas fa-eye"></i>
                               </button>
-                              {st.next && (
-                                <button
-                                  className={`btn btn-sm ${st.nextBtn} mr-1`}
-                                  onClick={() => handleUpdateStatus(order.id, st.next)}
-                                  disabled={updating}
-                                  title={st.nextLabel}
-                                >
-                                  <i className="fas fa-arrow-right mr-1"></i>{st.nextLabel}
-                                </button>
-                              )}
-                              {['WaitingDeposit', 'DepositPaid', 'Processing'].includes(order.status) && (
-                                <button className="btn btn-sm btn-outline-danger" onClick={() => handleCancel(order.id)} disabled={updating} title="Hủy đơn">
-                                  <i className="fas fa-ban mr-1"></i>Hủy
+                              <select
+                                className="form-control form-control-sm d-inline-block mr-1"
+                                value={order.status}
+                                onChange={e => handleUpdateStatus(order.id, e.target.value)}
+                                disabled={updating || order.status === 'Completed' || order.status === 'Cancelled'}
+                                style={{ width: 140, verticalAlign: 'middle' }}
+                              >
+                                {STATUS_LIST.map(s => (
+                                  <option key={s.value} value={s.value}>{s.label}</option>
+                                ))}
+                              </select>
+                              {order.status === 'WaitingDeposit' && (
+                                <button className="btn btn-sm btn-danger" onClick={() => handleCancel(order.id)} disabled={updating} title="Hủy đơn">
+                                  <i className="fas fa-times"></i>
                                 </button>
                               )}
                             </td>

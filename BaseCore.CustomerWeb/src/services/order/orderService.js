@@ -39,8 +39,18 @@ export const orderService = {
     return handleResponse(response, 'Failed to cancel order');
   },
 
-  getByUserId: async (userId, page = 1, pageSize = 50) => {
-    const response = await fetch(buildUrl('/api/orders/all', { userId }), {
+  getByUserId: async (userId, page = 1, pageSize = 10) => {
+    const params = { userId, page, pageSize };
+    const response = await fetch(buildUrl('/api/orders', params), {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+    return handleResponse(response, 'Failed to fetch user orders');
+  },
+
+  // Admin: lấy đơn của một user cụ thể theo ID
+  getByUserIdAdmin: async (userId) => {
+    const response = await fetch(buildUrl(`/api/orders/user/${userId}`), {
       method: 'GET',
       headers: getHeaders(true),
     });
