@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { cartService } from '../services/cart/cartService'
-import { PROVINCES } from '../data/vietnamAddress'
 import styles from './Cart.module.css'
 
 function formatPrice(n) { return n.toLocaleString('vi-VN') + 'đ' }
@@ -19,9 +18,12 @@ export default function Cart() {
     customerName: '',
     customerPhone: '',
     province: '',
-    district: '',
+    ward: '',
     streetAddress: '',
   })
+  const [provinces, setProvinces] = useState([])
+  const [wards, setWards] = useState([])
+  const [loadingWards, setLoadingWards] = useState(false)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState(null)
   const [stockNotice, setStockNotice] = useState('')
@@ -37,6 +39,13 @@ export default function Cart() {
   }, [user])
 
   useEffect(() => {
+    fetch('https://provinces.open-api.vn/api/p/')
+      .then(r => r.json())
+      .then(data => setProvinces(data))
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
     if (error) setStockNotice(error)
   }, [error])
 
@@ -44,11 +53,23 @@ export default function Cart() {
     setCheckoutData(prev => ({ ...prev, customerName: '' }))
   }
 
-  const handleProvinceChange = (value) => {
-    setCheckoutData(prev => ({ ...prev, province: value, district: '' }))
+  const handleProvinceChange = async (value) => {
+    const selectedProv = provinces.find(p => p.name === value)
+    setCheckoutData(prev => ({ ...prev, province: value, ward: '' }))
+    setWards([])
+    if (!selectedProv) return
+    setLoadingWards(true)
+    try {
+      const resp = await fetch(`https://provinces.open-api.vn/api/p/${selectedProv.code}?depth=3`)
+      const data = await resp.json()
+      const allWards = data.districts?.flatMap(d => d.wards || []) || []
+      setWards(allWards)
+    } catch {
+      setWards([])
+    } finally {
+      setLoadingWards(false)
+    }
   }
-
-  const selectedProvince = PROVINCES.find(p => p.name === checkoutData.province)
 
   const hasStockLimit = (item) =>
     item.availableStock !== null && item.availableStock !== undefined
@@ -96,7 +117,7 @@ export default function Cart() {
 
   const handleCheckout = async () => {
     if (!checkoutData.customerName.trim() || !checkoutData.customerPhone.trim() ||
-        !checkoutData.province || !checkoutData.district || !checkoutData.streetAddress.trim()) {
+        !checkoutData.province || !checkoutData.ward || !checkoutData.streetAddress.trim()) {
       setCheckoutError('Vui lòng điền đầy đủ thông tin giao hàng')
       return
     }
@@ -104,7 +125,7 @@ export default function Cart() {
     try {
       setCheckoutLoading(true)
       setCheckoutError(null)
-      const fullAddress = `${checkoutData.streetAddress}, ${checkoutData.district}, ${checkoutData.province}`
+      const fullAddress = `${checkoutData.streetAddress}, ${checkoutData.ward}, ${checkoutData.province}`
       const result = await cartService.checkout(
         fullAddress,
         'Standard',
@@ -345,32 +366,34 @@ export default function Cart() {
                       style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: 8, border: '1.5px solid #e0e0e0', fontSize: '0.95rem', background: '#fff' }}
                     >
                       <option value="">-- Chọn Tỉnh / Thành phố --</option>
-                      {PROVINCES.map(p => (
-                        <option key={p.name} value={p.name}>{p.name}</option>
+                      {provinces.map(p => (
+                        <option key={p.code} value={p.name}>{p.name}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className={styles.formGroup}>
-                    <label>Quận / Huyện *</label>
+                    <label>Xã / Phường *</label>
                     <select
-                      value={checkoutData.district}
-                      onChange={e => handleCheckoutChange('district', e.target.value)}
-                      disabled={!checkoutData.province}
-                      style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: 8, border: '1.5px solid #e0e0e0', fontSize: '0.95rem', background: checkoutData.province ? '#fff' : '#f5f5f5' }}
+                      value={checkoutData.ward}
+                      onChange={e => handleCheckoutChange('ward', e.target.value)}
+                      disabled={!checkoutData.province || loadingWards}
+                      style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: 8, border: '1.5px solid #e0e0e0', fontSize: '0.95rem', background: checkoutData.province && !loadingWards ? '#fff' : '#f5f5f5' }}
                     >
-                      <option value="">-- Chọn Quận / Huyện --</option>
-                      {selectedProvince?.districts.map(d => (
-                        <option key={d} value={d}>{d}</option>
+                      <option value="">
+                        {loadingWards ? '-- Đang tải xã/phường...' : '-- Chọn Xã / Phường --'}
+                      </option>
+                      {wards.map(w => (
+                        <option key={w.code} value={w.name}>{w.name}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className={styles.formGroup}>
-                    <label>Số nhà, tên đường, phường/xã *</label>
+                    <label>Số nhà, tên đường *</label>
                     <input
                       type="text"
-                      placeholder="VD: 123 Nguyễn Huệ, P. Bến Nghé"
+                      placeholder="VD: 123 Nguyễn Huệ"
                       value={checkoutData.streetAddress}
                       onChange={e => handleCheckoutChange('streetAddress', e.target.value)}
                     />
