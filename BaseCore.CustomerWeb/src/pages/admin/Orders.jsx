@@ -383,10 +383,10 @@ export default function Orders() {
                               <div>{new Date(order.orderDate).toLocaleDateString('vi-VN')}</div>
                               <div><small className="text-muted">{new Date(order.orderDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</small></div>
                             </td>
-                            <td><strong>{order.totalAmount && order.totalAmount.toLocaleString('vi-VN')} đ</strong></td>
+                            <td><strong>{(order.totalAmount ?? 0).toLocaleString('vi-VN')} đ</strong></td>
                             <td>
                               <span className={order.status === 'WaitingDeposit' ? 'text-warning font-weight-bold' : 'text-success'}>
-                                {order.depositAmount && order.depositAmount.toLocaleString('vi-VN')} đ
+                                {(order.depositAmount ?? 0).toLocaleString('vi-VN')} đ
                               </span>
                             </td>
                             <td><span className={'badge ' + st.badge}><i className={`fas ${st.icon} mr-1`}></i>{st.label}</span></td>
@@ -449,14 +449,14 @@ export default function Orders() {
                             <tbody>
                               <tr>
                                 <td className="text-muted pl-0" style={{ width: 110 }}>👤 Khách hàng</td>
-                                <td><strong>{(detail?.order || selected).customerName || '—'}</strong></td>
+                                <td><strong>{(detail || selected).customerName || '—'}</strong></td>
                               </tr>
                               <tr>
                                 <td className="text-muted pl-0">📞 Số điện thoại</td>
                                 <td>
-                                  <strong>{(detail?.order || selected).customerPhone || '—'}</strong>
-                                  {(detail?.order || selected).customerPhone && (
-                                    <a href={'tel:' + (detail?.order || selected).customerPhone} className="btn btn-sm btn-outline-success ml-2 py-0 px-1">
+                                  <strong>{(detail || selected).customerPhone || '—'}</strong>
+                                  {(detail || selected).customerPhone && (
+                                    <a href={'tel:' + (detail || selected).customerPhone} className="btn btn-sm btn-outline-success ml-2 py-0 px-1">
                                       <i className="fas fa-phone"></i>
                                     </a>
                                   )}
@@ -464,7 +464,7 @@ export default function Orders() {
                               </tr>
                               <tr>
                                 <td className="text-muted pl-0">🏠 Địa chỉ giao</td>
-                                <td>{(detail?.order || selected).shippingAddress || '—'}</td>
+                                <td>{(detail || selected).shippingAddress || '—'}</td>
                               </tr>
                               <tr>
                                 <td className="text-muted pl-0">📅 Ngày đặt</td>
@@ -478,11 +478,11 @@ export default function Orders() {
                             <div className="card-body py-2">
                               <div className="d-flex justify-content-between mb-1">
                                 <span className="text-muted">Tổng đơn hàng:</span>
-                                <strong>{selected.totalAmount && selected.totalAmount.toLocaleString('vi-VN')} đ</strong>
+                                <strong>{(selected.totalAmount ?? 0).toLocaleString('vi-VN')} đ</strong>
                               </div>
                               <div className="d-flex justify-content-between mb-1">
                                 <span className="text-warning">Đặt cọc (50%):</span>
-                                <strong className="text-warning">{selected.depositAmount && selected.depositAmount.toLocaleString('vi-VN')} đ</strong>
+                                <strong className="text-warning">{(selected.depositAmount ?? 0).toLocaleString('vi-VN')} đ</strong>
                               </div>
                               <div className="d-flex justify-content-between">
                                 <span className="text-muted">Còn lại khi nhận:</span>
@@ -514,19 +514,19 @@ export default function Orders() {
                                 ) : '—'}
                               </td>
                               <td className="text-center">{item.quantity}</td>
-                              <td className="text-right">{item.unitPrice && item.unitPrice.toLocaleString('vi-VN')} đ</td>
-                              <td className="text-right">{item.unitPrice && (item.unitPrice * item.quantity).toLocaleString('vi-VN')} đ</td>
+                              <td className="text-right">{(item.unitPrice ?? 0).toLocaleString('vi-VN')} đ</td>
+                              <td className="text-right">{((item.unitPrice ?? 0) * item.quantity).toLocaleString('vi-VN')} đ</td>
                             </tr>
                           ))}
                         </tbody>
                         <tfoot>
                           <tr>
                             <td colSpan={4} className="text-right">Tổng đơn hàng:</td>
-                            <td className="text-right"><strong>{selected.totalAmount && selected.totalAmount.toLocaleString('vi-VN')} đ</strong></td>
+                            <td className="text-right"><strong>{(selected.totalAmount ?? 0).toLocaleString('vi-VN')} đ</strong></td>
                           </tr>
                           <tr>
                             <td colSpan={4} className="text-right text-warning">Đặt cọc (50%):</td>
-                            <td className="text-right text-warning"><strong>{selected.depositAmount && selected.depositAmount.toLocaleString('vi-VN')} đ</strong></td>
+                            <td className="text-right text-warning"><strong>{(selected.depositAmount ?? 0).toLocaleString('vi-VN')} đ</strong></td>
                           </tr>
                         </tfoot>
                       </table>

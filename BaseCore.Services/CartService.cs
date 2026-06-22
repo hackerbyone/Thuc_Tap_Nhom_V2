@@ -60,6 +60,7 @@ namespace BaseCore.Services
                     ProductName = i.Product?.Name ?? string.Empty,
                     Price = GetEffectivePrice(i.Product, i.SelectedGender),
                     Quantity = i.Quantity,
+                    AvailableStock = i.Product is null ? 0 : GetAvailableStock(i.Product, i.SelectedGender),
                     ImageUrl = i.Product?.ImageUrl ?? string.Empty,
                     SelectedGender = i.SelectedGender
                 }).ToList(),

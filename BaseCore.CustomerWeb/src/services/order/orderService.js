@@ -39,30 +39,8 @@ export const orderService = {
     return handleResponse(response, 'Failed to cancel order');
   },
 
-  createVnpayUrl: async (orderId) => {
-    const response = await fetch(buildUrl(`/api/vnpay/create/${orderId}`), {
-      method: 'POST',
-      headers: getHeaders(true),
-    });
-    return handleResponse(response, 'Không thể tạo liên kết thanh toán VNPay');
-  },
-
-  verifyVnpay: async (queryString) => {
-    const response = await fetch(buildUrl('/api/vnpay/verify') + '?' + queryString, {
-      method: 'GET',
-      headers: getHeaders(false),
-    });
-    return handleResponse(response, 'Không thể xác thực thanh toán VNPay');
-  },
-
-  getByUserId: async (userId, page = 1, pageSize = 10) => {
-    const params = {
-      userId,
-      page,
-      pageSize,
-    };
-
-    const response = await fetch(buildUrl('/api/orders', params), {
+  getByUserId: async (userId, page = 1, pageSize = 50) => {
+    const response = await fetch(buildUrl('/api/orders/all', { userId }), {
       method: 'GET',
       headers: getHeaders(true),
     });

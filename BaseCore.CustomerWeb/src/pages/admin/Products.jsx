@@ -69,6 +69,13 @@ const Products = () => {
         }
     };
 
+    const getProductCategoryName = (product) => {
+        if (product.categoryName) return product.categoryName;
+        if (product.category?.name) return product.category.name;
+
+        const category = categories.find(cat => String(cat.id) === String(product.categoryId));
+        return category?.name || 'Chưa phân loại';
+    };
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -270,7 +277,6 @@ const Products = () => {
                                 </div>
                             ) : (
                                 <>
-<<<<<<< Updated upstream
                                     <div className="table-responsive">
                                         <table className="table table-bordered table-striped table-hover table-sm">
                                             <thead>
@@ -325,33 +331,9 @@ const Products = () => {
                                                             <td>
                                                                 <span className="badge badge-light" style={{ background: '#e8f4fd', color: '#3d8bc2', border: '1px solid #a8d5f0' }}>
                                                                     {categories.find(cat => cat.id === product.categoryId)?.name || product.category?.name || '—'}
-=======
-                                    {products.length === 0 ? (
-                                        <div className="text-center py-5 text-muted">
-                                            <i className="fas fa-box-open fa-3x mb-3 d-block"></i>
-                                            Không tìm thấy sản phẩm nào
-                                        </div>
-                                    ) : (
-                                        <div className="row" style={{ margin: '0 -8px' }}>
-                                            {products.map(product => (
-                                                <div key={product.id} className="col-xl-3 col-lg-4 col-md-6 mb-4" style={{ padding: '0 8px' }}>
-                                                    <div className="card h-100 product-grid-card">
-                                                        <div style={{ height: '160px', background: '#f0f6fc', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                                                            {product.imageUrl ? (
-                                                                <img
-                                                                    src={product.imageUrl}
-                                                                    alt={product.name}
-                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                                />
-                                                            ) : (
-                                                                <i className="fas fa-image text-muted" style={{ fontSize: '2.5rem' }}></i>
-                                                            )}
-                                                        </div>
-                                                        <div className="card-body" style={{ padding: '10px 12px' }}>
-                                                            <div style={{ marginBottom: '6px', overflow: 'hidden' }}>
-                                                                <span className="badge badge-light" style={{ background: '#e8f4fd', color: '#3d8bc2', border: '1px solid #a8d5f0', fontSize: '0.7rem' }}>
+
                                                                     {getProductCategoryName(product)}
->>>>>>> Stashed changes
+
                                                                 </span>
                                                                 <span className="text-muted float-right" style={{ fontSize: '0.7rem' }}>#{product.id}</span>
                                                             </div>

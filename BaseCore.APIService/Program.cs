@@ -19,6 +19,9 @@ builder.Services.AddControllers()
         // Bỏ qua vòng tròn object (order → orderDetails → order → ...)
         options.JsonSerializerOptions.ReferenceHandler =
             System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        // Luôn serialize DateTime dưới dạng UTC có hậu tố 'Z'
+        // (EF Core đọc datetime2 từ SQL Server với Kind=Unspecified dù lưu bằng DateTime.UtcNow)
+        options.JsonSerializerOptions.Converters.Add(new UtcDateTimeConverter());
     });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -76,7 +79,6 @@ builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<IVnPayService, VnPayService>();
 
 builder.Services.AddDbContext<MySqlDbContext>(options =>
 {
@@ -292,5 +294,16 @@ app.UseAuthorization();
 app.MapControllers();
 
 Console.WriteLine("BaseCore API Service running on port 5001");
+
 Console.WriteLine("Endpoints: /api/products, /api/categories, /api/orders");
 app.Run();
+
+// Luôn serialize DateTime với 'Z' suffix — fix EF Core DateTime.Kind=Unspecified từ SQL Server datetime2
+class UtcDateTimeConverter : System.Text.Json.Serialization.JsonConverter<DateTime>
+{
+    public override DateTime Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+        => DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc);
+
+    public override void Write(System.Text.Json.Utf8JsonWriter writer, DateTime value, System.Text.Json.JsonSerializerOptions options)
+        => writer.WriteStringValue(DateTime.SpecifyKind(value, DateTimeKind.Utc).ToString("O"));
+}

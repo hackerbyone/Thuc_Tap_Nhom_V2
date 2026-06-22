@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BaseCore.Entities;
@@ -8,6 +9,7 @@ namespace BaseCore.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class WarehouseController : ControllerBase
     {
         private readonly MySqlDbContext _context;
@@ -22,7 +24,7 @@ namespace BaseCore.APIService.Controllers
         // ────────────────────────────────────────────────────────────
 
         [HttpGet("tanks")]
-        public async Task<IActionResult> GetTanks([FromQuery] string? keyword, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        public async Task<IActionResult> GetTanks([FromQuery] string? keyword, [FromQuery] int page = 1, [FromQuery] int pageSize = 21)
         {
             var query = _context.TankFishTrackings
                 .Include(t => t.Product)

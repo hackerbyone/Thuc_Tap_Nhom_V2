@@ -18,6 +18,7 @@ namespace BaseCore.DTO.Common
         public string ProductName { get; set; } = "";
         public decimal Price { get; set; }
         public int Quantity { get; set; }
+        public int AvailableStock { get; set; }
         public decimal SubTotal => Price * Quantity;
         public string ImageUrl { get; set; } = "";
         public string? SelectedGender { get; set; }
