@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { buildUrl, getHeaders, handleResponse } from '../../services/utils/apiClient';
 
 const STATUS_LIST = [
-  { value: 'WaitingDeposit', label: 'Chờ đặt cọc',   badge: 'badge-warning'   },
-  { value: 'DepositPaid',    label: 'Đã đặt cọc',    badge: 'badge-primary'   },
-  { value: 'Processing',     label: 'Đang xử lý',    badge: 'badge-info'      },
-  { value: 'Shipping',       label: 'Đang giao',      badge: 'badge-info'      },
-  { value: 'Completed',      label: 'Hoàn thành',     badge: 'badge-success'   },
-  { value: 'Cancelled',      label: 'Đã hủy',         badge: 'badge-danger'    },
+  { value: 'WaitingDeposit', label: 'Chờ đặt cọc', badge: 'badge-warning', icon: 'fa-hourglass-half',  next: 'DepositPaid', nextLabel: 'Xác nhận cọc', nextBtn: 'btn-success' },
+  { value: 'DepositPaid',    label: 'Đã đặt cọc',  badge: 'badge-primary', icon: 'fa-money-bill-wave', next: 'Processing',  nextLabel: 'Bắt đầu xử lý', nextBtn: 'btn-info'   },
+  { value: 'Processing',     label: 'Đang xử lý',  badge: 'badge-info',    icon: 'fa-cog',             next: 'Shipping',    nextLabel: 'Giao hàng',     nextBtn: 'btn-primary'},
+  { value: 'Shipping',       label: 'Đang giao',   badge: 'badge-info',    icon: 'fa-truck',           next: 'Completed',   nextLabel: 'Hoàn thành',    nextBtn: 'btn-success'},
+  { value: 'Completed',      label: 'Hoàn thành',  badge: 'badge-success', icon: 'fa-check-circle',    next: null,          nextLabel: null,             nextBtn: null         },
+  { value: 'Cancelled',      label: 'Đã hủy',      badge: 'badge-danger',  icon: 'fa-times-circle',    next: null,          nextLabel: null,             nextBtn: null         },
 ];
 
 const statusLabel = (val) =>
@@ -229,15 +229,18 @@ export default function Orders() {
 
           <div className="row mb-3">
             {STATUS_LIST.map(s => (
-              <div className="col-6 col-md-3 mb-2" key={s.value}>
+              <div className="col-6 col-md-2 mb-2" key={s.value}>
                 <div
                   className={'small-box ' + s.badge.replace('badge-', 'bg-') + ' mb-0'}
-                  style={{ cursor: 'pointer', opacity: filterStatus === s.value ? 1 : 0.75 }}
+                  style={{ cursor: 'pointer', opacity: filterStatus === s.value ? 1 : 0.72, transition: 'opacity 0.2s' }}
                   onClick={() => setFilter(filterStatus === s.value ? '' : s.value)}
                 >
                   <div className="inner">
                     <h4>{countBy(s.value)}</h4>
-                    <p>{s.label}</p>
+                    <p style={{ fontSize: '0.82rem', marginBottom: 0 }}>{s.label}</p>
+                  </div>
+                  <div className="icon">
+                    <i className={`fas ${s.icon}`}></i>
                   </div>
                 </div>
               </div>
@@ -386,25 +389,24 @@ export default function Orders() {
                                 {(order.depositAmount ?? 0).toLocaleString('vi-VN')} đ
                               </span>
                             </td>
-                            <td><span className={'badge ' + st.badge}>{st.label}</span></td>
-                            <td>
+                            <td><span className={'badge ' + st.badge}><i className={`fas ${st.icon} mr-1`}></i>{st.label}</span></td>
+                            <td style={{ whiteSpace: 'nowrap' }}>
                               <button className="btn btn-sm btn-outline-primary mr-1" onClick={() => openDetail(order)} title="Xem chi tiết">
                                 <i className="fas fa-eye"></i>
                               </button>
-                              <select
-                                className="form-control form-control-sm d-inline-block mr-1"
-                                value={order.status}
-                                onChange={e => handleUpdateStatus(order.id, e.target.value)}
-                                disabled={updating || order.status === 'Completed' || order.status === 'Cancelled'}
-                                style={{ width: 140, verticalAlign: 'middle' }}
-                              >
-                                {STATUS_LIST.map(s => (
-                                  <option key={s.value} value={s.value}>{s.label}</option>
-                                ))}
-                              </select>
+                              {st.next && (
+                                <button
+                                  className={`btn btn-sm ${st.nextBtn} mr-1`}
+                                  onClick={() => handleUpdateStatus(order.id, st.next)}
+                                  disabled={updating}
+                                  title={st.nextLabel}
+                                >
+                                  <i className="fas fa-arrow-right mr-1"></i>{st.nextLabel}
+                                </button>
+                              )}
                               {['WaitingDeposit', 'DepositPaid', 'Processing'].includes(order.status) && (
-                                <button className="btn btn-sm btn-danger" onClick={() => handleCancel(order.id)} disabled={updating} title="Hủy đơn">
-                                  <i className="fas fa-times"></i>
+                                <button className="btn btn-sm btn-outline-danger" onClick={() => handleCancel(order.id)} disabled={updating} title="Hủy đơn">
+                                  <i className="fas fa-ban mr-1"></i>Hủy
                                 </button>
                               )}
                             </td>
@@ -423,8 +425,8 @@ export default function Orders() {
       {/* Detail Modal */}
       {showDetail && selected && (
         <>
-          <div className="modal fade show" style={{ display: 'block', zIndex: 1050 }} tabIndex="-1">
-            <div className="modal-dialog modal-lg">
+          <div className="modal fade show" style={{ display: 'block', zIndex: 1050, overflowY: 'auto' }} tabIndex="-1">
+            <div className="modal-dialog modal-xl" style={{ margin: '1.5rem auto' }}>
               <div className="modal-content">
                 <div className="modal-header">
                   <h5 className="modal-title">
@@ -538,27 +540,28 @@ export default function Orders() {
                               <i className="fas fa-lock mr-1"></i>
                               Đơn hàng đã {selected.status === 'Completed' ? 'hoàn thành' : 'bị hủy'}, không thể thay đổi
                             </span>
-                          ) : (
-                            <>
-                              <select
-                                className="form-control form-control-sm"
-                                value={selected.status}
-                                onChange={e => handleUpdateStatus(selected.id, e.target.value)}
-                                disabled={updating}
-                                style={{ width: 200 }}
-                              >
-                                {STATUS_LIST.map(s => (
-                                  <option key={s.value} value={s.value}>{s.label}</option>
-                                ))}
-                              </select>
-                              {['WaitingDeposit', 'DepositPaid', 'Processing'].includes(selected.status) && (
-                                <button className="btn btn-sm btn-danger" onClick={() => handleCancel(selected.id)} disabled={updating}>
-                                  <i className="fas fa-times mr-1"></i> Hủy đơn
-                                </button>
-                              )}
-                              {updating && <div className="spinner-border spinner-border-sm text-primary" role="status"></div>}
-                            </>
-                          )}
+                          ) : (() => {
+                            const stInfo = statusLabel(selected.status);
+                            return (
+                              <>
+                                {stInfo.next && (
+                                  <button
+                                    className={`btn btn-sm ${stInfo.nextBtn}`}
+                                    onClick={() => handleUpdateStatus(selected.id, stInfo.next)}
+                                    disabled={updating}
+                                  >
+                                    <i className="fas fa-arrow-right mr-1"></i>{stInfo.nextLabel}
+                                  </button>
+                                )}
+                                {['WaitingDeposit', 'DepositPaid', 'Processing'].includes(selected.status) && (
+                                  <button className="btn btn-sm btn-danger" onClick={() => handleCancel(selected.id)} disabled={updating}>
+                                    <i className="fas fa-ban mr-1"></i> Hủy đơn
+                                  </button>
+                                )}
+                                {updating && <div className="spinner-border spinner-border-sm text-primary" role="status"></div>}
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     </>
