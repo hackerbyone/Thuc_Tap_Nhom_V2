@@ -28,6 +28,14 @@ const Products = () => {
         femaleStock: 0,
         imageUrl: '',
         categoryId: '',
+        tempMin: '',
+        tempMax: '',
+        phMin: '',
+        phMax: '',
+        hardness: '',
+        maxSize: '',
+        diet: '',
+        compatibility: '',
     });
     const [error, setError] = useState('');
     const [uploadingImage, setUploadingImage] = useState(false);
@@ -98,6 +106,14 @@ const Products = () => {
                 femaleStock: product.femaleStock ?? 0,
                 imageUrl: product.imageUrl || '',
                 categoryId: product.categoryId,
+                tempMin: product.tempMin ?? '',
+                tempMax: product.tempMax ?? '',
+                phMin: product.phMin ?? '',
+                phMax: product.phMax ?? '',
+                hardness: product.hardness || '',
+                maxSize: product.maxSize || '',
+                diet: product.diet || '',
+                compatibility: product.compatibility || '',
             });
         } else {
             setEditingProduct(null);
@@ -112,6 +128,14 @@ const Products = () => {
                 femaleStock: 0,
                 imageUrl: '',
                 categoryId: categories[0]?.id || '',
+                tempMin: '',
+                tempMax: '',
+                phMin: '',
+                phMax: '',
+                hardness: '',
+                maxSize: '',
+                diet: '',
+                compatibility: '',
             });
         }
         setError('');
@@ -153,6 +177,14 @@ const Products = () => {
                 categoryId: parseInt(formData.categoryId),
                 maleStock,
                 femaleStock,
+                tempMin: formData.tempMin !== '' ? parseFloat(formData.tempMin) : null,
+                tempMax: formData.tempMax !== '' ? parseFloat(formData.tempMax) : null,
+                phMin: formData.phMin !== '' ? parseFloat(formData.phMin) : null,
+                phMax: formData.phMax !== '' ? parseFloat(formData.phMax) : null,
+                hardness: formData.hardness || null,
+                maxSize: formData.maxSize || null,
+                diet: formData.diet || null,
+                compatibility: formData.compatibility || null,
             };
             if (editingProduct) {
                 await productService.update(editingProduct.id, data);
@@ -656,6 +688,65 @@ const Products = () => {
                                         })()}
                                     </div>
                                 </div>
+                                    <div className="card card-body bg-light mb-3 p-3">
+                                        <h6 className="mb-3" style={{ borderBottom: '1px solid #dee2e6', paddingBottom: '0.5rem' }}>
+                                            <i className="fas fa-flask mr-1 text-info"></i> Thông số sinh học (chỉ áp dụng cho cá)
+                                        </h6>
+                                        <div className="row">
+                                            <div className="col-6">
+                                                <div className="form-group mb-2">
+                                                    <label className="small mb-1">🌡️ Nhiệt độ min (°C)</label>
+                                                    <input type="number" step="0.1" className="form-control form-control-sm" value={formData.tempMin}
+                                                        onChange={e => setFormData({ ...formData, tempMin: e.target.value })} placeholder="VD: 24" />
+                                                </div>
+                                            </div>
+                                            <div className="col-6">
+                                                <div className="form-group mb-2">
+                                                    <label className="small mb-1">🌡️ Nhiệt độ max (°C)</label>
+                                                    <input type="number" step="0.1" className="form-control form-control-sm" value={formData.tempMax}
+                                                        onChange={e => setFormData({ ...formData, tempMax: e.target.value })} placeholder="VD: 28" />
+                                                </div>
+                                            </div>
+                                            <div className="col-6">
+                                                <div className="form-group mb-2">
+                                                    <label className="small mb-1">🧪 pH min</label>
+                                                    <input type="number" step="0.1" className="form-control form-control-sm" value={formData.phMin}
+                                                        onChange={e => setFormData({ ...formData, phMin: e.target.value })} placeholder="VD: 6.5" />
+                                                </div>
+                                            </div>
+                                            <div className="col-6">
+                                                <div className="form-group mb-2">
+                                                    <label className="small mb-1">🧪 pH max</label>
+                                                    <input type="number" step="0.1" className="form-control form-control-sm" value={formData.phMax}
+                                                        onChange={e => setFormData({ ...formData, phMax: e.target.value })} placeholder="VD: 7.5" />
+                                                </div>
+                                            </div>
+                                            <div className="col-6">
+                                                <div className="form-group mb-2">
+                                                    <label className="small mb-1">💧 Độ cứng (dH)</label>
+                                                    <input type="text" className="form-control form-control-sm" value={formData.hardness}
+                                                        onChange={e => setFormData({ ...formData, hardness: e.target.value })} placeholder="VD: 5-15 dH" />
+                                                </div>
+                                            </div>
+                                            <div className="col-6">
+                                                <div className="form-group mb-2">
+                                                    <label className="small mb-1">📏 Kích thước tối đa</label>
+                                                    <input type="text" className="form-control form-control-sm" value={formData.maxSize}
+                                                        onChange={e => setFormData({ ...formData, maxSize: e.target.value })} placeholder="VD: 8 cm" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="form-group mb-2">
+                                            <label className="small mb-1">🍤 Chế độ ăn</label>
+                                            <textarea className="form-control form-control-sm" rows="2" value={formData.diet}
+                                                onChange={e => setFormData({ ...formData, diet: e.target.value })} placeholder="VD: Ăn tạp, thức ăn viên, tôm, giun..." />
+                                        </div>
+                                        <div className="form-group mb-0">
+                                            <label className="small mb-1">🐟 Nuôi chung / Tính tương thích</label>
+                                            <textarea className="form-control form-control-sm" rows="2" value={formData.compatibility}
+                                                onChange={e => setFormData({ ...formData, compatibility: e.target.value })} placeholder="VD: Có thể nuôi chung cá hiền. Không nuôi với cá đuôi dài vì hay rỉa vây..." />
+                                        </div>
+                                    </div>
                                 <div className="modal-footer">
                                     <button type="button" className="btn btn-secondary" onClick={closeModal}>
                                         <i className="fas fa-times mr-1"></i> Hủy

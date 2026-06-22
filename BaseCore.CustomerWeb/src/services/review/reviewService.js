@@ -18,11 +18,11 @@ export const reviewService = {
   },
 
   // Tạo đánh giá mới — truyền orderId (bắt buộc), không cần productId
-  create: async ({ orderId, rating, comment }) => {
+  create: async ({ orderId, rating, comment, reviewImageUrl }) => {
     const res = await fetch(buildUrl('/api/reviews'), {
       method: 'POST',
       headers: getHeaders(true),
-      body: JSON.stringify({ orderId, rating, comment }),
+      body: JSON.stringify({ orderId, rating, comment, reviewImageUrl }),
     });
     return handleResponse(res, 'Failed to submit review');
   },

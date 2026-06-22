@@ -25,6 +25,7 @@ export default function Cart() {
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState(null)
   const [stockNotice, setStockNotice] = useState('')
+  const [shippingMethod, setShippingMethod] = useState('Standard')
 
   useEffect(() => {
     if (user) {
@@ -92,8 +93,9 @@ export default function Cart() {
     setQty(item.id, item.quantity + 1)
   }
 
-  const shipping = total >= 500000 ? 0 : 35000
-  const grandTotal = total + shipping
+  const shipping = shippingMethod === 'Express' ? 65000 : shippingMethod === 'LiveAnimal' ? 80000 : (total >= 500000 ? 0 : 35000)
+  const packagingFee = shippingMethod === 'LiveAnimal' ? 50000 : 0
+  const grandTotal = total + shipping + packagingFee
 
   const handleCheckoutChange = (field, value) => {
     setCheckoutData(prev => ({ ...prev, [field]: value }))
@@ -122,11 +124,12 @@ export default function Cart() {
       const fullAddress = `${checkoutData.streetAddress}, ${checkoutData.ward}, ${checkoutData.province}`
       const result = await cartService.checkout(
         fullAddress,
-        'Standard',
+        shippingMethod,
         'COD',
         checkoutData.customerName,
         checkoutData.customerPhone,
-        shipping
+        shipping,
+        packagingFee
       )
       await clear()
       closeCheckoutModal()
@@ -273,12 +276,18 @@ export default function Cart() {
               <span>{formatPrice(total)}</span>
             </div>
             <div className={styles.summaryRow}>
-              <span>Phí vận chuyển</span>
+              <span>Phí vận chuyển{shippingMethod === 'Express' ? ' (Nhanh)' : shippingMethod === 'LiveAnimal' ? ' (Cá sống)' : ''}</span>
               <span className={shipping === 0 ? styles.free : ''}>
                 {shipping === 0 ? 'Miễn phí' : formatPrice(shipping)}
               </span>
             </div>
-            {total < 500000 && (
+            {packagingFee > 0 && (
+              <div className={styles.summaryRow}>
+                <span>Phí đóng gói sống</span>
+                <span>{formatPrice(packagingFee)}</span>
+              </div>
+            )}
+            {shippingMethod === 'Standard' && total < 500000 && (
               <p className={styles.shippingNote}>
                 Thêm <strong>{formatPrice(500000 - total)}</strong> để được miễn phí vận chuyển
               </p>
@@ -381,6 +390,35 @@ export default function Cart() {
                       value={checkoutData.streetAddress}
                       onChange={e => handleCheckoutChange('streetAddress', e.target.value)}
                     />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Phương thức vận chuyển *</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {[
+                        { key: 'Standard', label: 'Tiêu chuẩn', desc: `${total >= 500000 ? 'Miễn phí (đơn ≥ 500K)' : '35.000đ'}`, icon: '📦' },
+                        { key: 'Express', label: 'Nhanh (Express)', desc: '65.000đ', icon: '⚡' },
+                        { key: 'LiveAnimal', label: 'Giao cá sống', desc: '80.000đ + 50.000đ đóng gói', icon: '🐟' },
+                      ].map(opt => (
+                        <label key={opt.key} style={{
+                          display: 'flex', alignItems: 'center', gap: '0.6rem',
+                          padding: '0.6rem 0.75rem', borderRadius: 8,
+                          border: `2px solid ${shippingMethod === opt.key ? '#1976d2' : '#e0e0e0'}`,
+                          background: shippingMethod === opt.key ? '#e3f2fd' : '#fff',
+                          cursor: 'pointer', transition: 'all 0.15s'
+                        }}>
+                          <input type="radio" name="shippingMethod" value={opt.key}
+                            checked={shippingMethod === opt.key}
+                            onChange={() => setShippingMethod(opt.key)}
+                            style={{ accentColor: '#1976d2' }} />
+                          <span style={{ fontSize: '1.1rem' }}>{opt.icon}</span>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{opt.label}</div>
+                            <div style={{ color: '#666', fontSize: '0.8rem' }}>{opt.desc}</div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
                   </div>
 
                   <div style={{ background: '#fff3e0', border: '1px solid #ffb74d', borderRadius: 6, padding: '0.7rem 0.9rem', marginBottom: '0.75rem', fontSize: '0.85rem' }}>

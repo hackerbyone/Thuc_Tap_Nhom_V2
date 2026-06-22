@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { orderService } from '../services/order/orderService';
 import { reviewService } from '../services/review/reviewService';
+import { uploadService } from '../services/upload/uploadService';
 import styles from './OrderHistory.module.css';
 
 const REVIEWABLE_STATUSES = ['Completed'];
@@ -24,11 +25,16 @@ export default function OrderHistory() {
   const [loading, setLoading] = useState(true);
   const [expandedOrders, setExpandedOrders] = useState(new Set());
 
+  const [loyaltyPoints, setLoyaltyPoints] = useState(null);
+
   const [reviewedOrderIds, setReviewedOrderIds] = useState(new Set());
   const [reviewOrderId, setReviewOrderId] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
-  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '', reviewImageUrl: '' });
+  const [reviewImageFile, setReviewImageFile] = useState(null);
+  const [reviewImagePreview, setReviewImagePreview] = useState('');
+  const [reviewImageUploading, setReviewImageUploading] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewError, setReviewError] = useState('');
   const [reviewSuccess, setReviewSuccess] = useState(false);
@@ -52,8 +58,15 @@ export default function OrderHistory() {
     } catch { }
   };
 
+  const fetchLoyaltyPoints = async () => {
+    try {
+      const data = await orderService.getMyPoints();
+      setLoyaltyPoints(data.loyaltyPoints ?? 0);
+    } catch { }
+  };
+
   useEffect(() => {
-    if (user) { fetchOrders(); fetchReviewedOrders(); }
+    if (user) { fetchOrders(); fetchReviewedOrders(); fetchLoyaltyPoints(); }
   }, [user]);
 
   const toggleExpand = (orderId) => {
@@ -78,7 +91,9 @@ export default function OrderHistory() {
 
   const openReviewModal = (orderId) => {
     setReviewOrderId(orderId);
-    setReviewForm({ rating: 5, comment: '' });
+    setReviewForm({ rating: 5, comment: '', reviewImageUrl: '' });
+    setReviewImageFile(null);
+    setReviewImagePreview('');
     setReviewError('');
     setShowWarning(false);
     setReviewSuccess(false);
@@ -86,6 +101,23 @@ export default function OrderHistory() {
   };
 
   const closeReviewModal = () => { setShowReviewModal(false); setReviewOrderId(null); };
+
+  const handleReviewImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setReviewImageFile(file);
+    setReviewImagePreview(URL.createObjectURL(file));
+    setReviewImageUploading(true);
+    try {
+      const result = await uploadService.uploadImage(file);
+      setReviewForm(f => ({ ...f, reviewImageUrl: result.url }));
+    } catch {
+      setReviewError('Tải ảnh thất bại, vui lòng thử lại');
+    } finally {
+      setReviewImageUploading(false);
+      e.target.value = '';
+    }
+  };
 
   const handleReviewNext = () => {
     if (!reviewForm.comment.trim()) { setReviewError('Vui lòng nhập nhận xét của bạn'); return; }
@@ -97,7 +129,7 @@ export default function OrderHistory() {
     setReviewLoading(true);
     setReviewError('');
     try {
-      await reviewService.create({ orderId: reviewOrderId, rating: reviewForm.rating, comment: reviewForm.comment });
+      await reviewService.create({ orderId: reviewOrderId, rating: reviewForm.rating, comment: reviewForm.comment, reviewImageUrl: reviewForm.reviewImageUrl || undefined });
       setReviewSuccess(true);
       setShowWarning(false);
       setReviewedOrderIds(prev => new Set([...prev, reviewOrderId]));
@@ -128,7 +160,18 @@ export default function OrderHistory() {
 
   return (
     <main className={styles.page}>
-      <h1 className={styles.title}>Đơn hàng của tôi</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
+        <h1 className={styles.title} style={{ margin: 0 }}>Đơn hàng của tôi</h1>
+        {loyaltyPoints !== null && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'linear-gradient(135deg, #fff8e1, #fffde7)', border: '1.5px solid #f59e0b', borderRadius: 10, padding: '0.5rem 1rem' }}>
+            <span style={{ fontSize: '1.5rem' }}>⭐</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#b45309' }}>{loyaltyPoints.toLocaleString('vi-VN')} điểm</div>
+              <div style={{ fontSize: '0.75rem', color: '#78350f' }}>Điểm tích lũy của bạn</div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {orders.length === 0 ? (
         <p>Bạn chưa có đơn hàng nào. <Link to="/products">Đi mua cá ngay!</Link></p>
@@ -301,6 +344,21 @@ export default function OrderHistory() {
                     placeholder="Chia sẻ cảm nhận về sản phẩm, dịch vụ..." rows={4}
                     style={{ width: '100%', padding: '0.75rem', borderRadius: 8, border: '1px solid #ddd', fontSize: '0.93rem', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }} />
                 </div>
+                <div style={{ marginBottom: '1.1rem' }}>
+                  <p style={{ margin: '0 0 0.4rem', fontWeight: 600 }}>Ảnh đính kèm <span style={{ fontWeight: 400, color: '#888', fontSize: '0.85rem' }}>(tuỳ chọn)</span></p>
+                  <label style={{ display: 'inline-block', padding: '0.5rem 1rem', borderRadius: 8, border: '1.5px dashed #bbb', cursor: 'pointer', fontSize: '0.88rem', color: '#555', background: '#fafafa' }}>
+                    📷 Chọn ảnh
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleReviewImageChange} disabled={reviewImageUploading} />
+                  </label>
+                  {reviewImageUploading && <span style={{ marginLeft: '0.7rem', fontSize: '0.85rem', color: '#888' }}>Đang tải ảnh...</span>}
+                  {reviewImagePreview && !reviewImageUploading && (
+                    <div style={{ marginTop: '0.6rem', position: 'relative', display: 'inline-block' }}>
+                      <img src={reviewImagePreview} alt="preview" style={{ maxWidth: 180, maxHeight: 140, borderRadius: 8, border: '1px solid #eee', objectFit: 'cover' }} />
+                      <button onClick={() => { setReviewImagePreview(''); setReviewImageFile(null); setReviewForm(f => ({ ...f, reviewImageUrl: '' })); }}
+                        style={{ position: 'absolute', top: -8, right: -8, background: '#e53935', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: '0.75rem', lineHeight: 1 }}>✕</button>
+                    </div>
+                  )}
+                </div>
                 {reviewError && <p style={{ color: '#e53935', fontSize: '0.85rem', margin: '0 0 0.8rem' }}>{reviewError}</p>}
                 <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-end' }}>
                   <button onClick={closeReviewModal} style={{ padding: '0.6rem 1.2rem', borderRadius: 8, border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}>Hủy</button>
@@ -320,7 +378,10 @@ export default function OrderHistory() {
                     <span style={{ color: '#f59e0b' }}>{'★'.repeat(reviewForm.rating)}</span>
                     <span style={{ color: '#d1d5db' }}>{'☆'.repeat(5 - reviewForm.rating)}</span>
                   </div>
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#555' }}>{reviewForm.comment}</p>
+                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', color: '#555' }}>{reviewForm.comment}</p>
+                  {reviewImagePreview && (
+                    <img src={reviewImagePreview} alt="review" style={{ maxWidth: 140, maxHeight: 110, borderRadius: 6, border: '1px solid #eee', objectFit: 'cover' }} />
+                  )}
                 </div>
                 {reviewError && <p style={{ color: '#e53935', fontSize: '0.85rem', margin: '0 0 0.8rem' }}>{reviewError}</p>}
                 <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-end' }}>

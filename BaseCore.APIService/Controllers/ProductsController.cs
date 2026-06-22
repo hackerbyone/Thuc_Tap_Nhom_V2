@@ -49,7 +49,9 @@ namespace BaseCore.APIService.Controllers
             p.ImageUrl, p.Description, p.CareInstructions, p.Environment,
             p.MaleStock, p.FemaleStock, p.CategoryId,
             categoryName = p.Category != null ? p.Category.Name : null,
-            rating, reviews
+            rating, reviews,
+            p.TempMin, p.TempMax, p.PhMin, p.PhMax,
+            p.Hardness, p.MaxSize, p.Diet, p.Compatibility
         };
 
 
@@ -176,7 +178,15 @@ namespace BaseCore.APIService.Controllers
                 Environment = dto.Environment,
                 MaleStock = maleStock,
                 FemaleStock = femaleStock,
-                ImageUrl = dto.ImageUrl ?? ""
+                ImageUrl = dto.ImageUrl ?? "",
+                TempMin = dto.TempMin,
+                TempMax = dto.TempMax,
+                PhMin = dto.PhMin,
+                PhMax = dto.PhMax,
+                Hardness = dto.Hardness,
+                MaxSize = dto.MaxSize,
+                Diet = dto.Diet,
+                Compatibility = dto.Compatibility
             };
 
             await _productRepository.AddAsync(product);
@@ -231,6 +241,14 @@ namespace BaseCore.APIService.Controllers
             product.MaleStock = newMaleStock;
             product.FemaleStock = newFemaleStock;
             product.ImageUrl = dto.ImageUrl ?? product.ImageUrl;
+            product.TempMin = dto.TempMin ?? product.TempMin;
+            product.TempMax = dto.TempMax ?? product.TempMax;
+            product.PhMin = dto.PhMin ?? product.PhMin;
+            product.PhMax = dto.PhMax ?? product.PhMax;
+            product.Hardness = dto.Hardness ?? product.Hardness;
+            product.MaxSize = dto.MaxSize ?? product.MaxSize;
+            product.Diet = dto.Diet ?? product.Diet;
+            product.Compatibility = dto.Compatibility ?? product.Compatibility;
             // Auto-sync stock
             product.Stock = isGenderProduct ? newMaleStock + newFemaleStock : targetStock;
 
@@ -370,6 +388,14 @@ namespace BaseCore.APIService.Controllers
         public int MaleStock { get; set; }
         public int FemaleStock { get; set; }
         public string? ImageUrl { get; set; }
+        public decimal? TempMin { get; set; }
+        public decimal? TempMax { get; set; }
+        public decimal? PhMin { get; set; }
+        public decimal? PhMax { get; set; }
+        public string? Hardness { get; set; }
+        public string? MaxSize { get; set; }
+        public string? Diet { get; set; }
+        public string? Compatibility { get; set; }
     }
 
     public class ProductUpdateDto
@@ -385,5 +411,13 @@ namespace BaseCore.APIService.Controllers
         public int? MaleStock { get; set; }
         public int? FemaleStock { get; set; }
         public string? ImageUrl { get; set; }
+        public decimal? TempMin { get; set; }
+        public decimal? TempMax { get; set; }
+        public decimal? PhMin { get; set; }
+        public decimal? PhMax { get; set; }
+        public string? Hardness { get; set; }
+        public string? MaxSize { get; set; }
+        public string? Diet { get; set; }
+        public string? Compatibility { get; set; }
     }
 }

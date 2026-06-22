@@ -12,8 +12,10 @@ namespace BaseCore.Entities
         public decimal DepositAmount { get; set; }
         public string Status { get; set; } = "WaitingDeposit";
         public string ShippingAddress { get; set; } = "";
-        public string CustomerName { get; set; } = "";   // Tên khách hàng
-        public string CustomerPhone { get; set; } = "";  // SĐT khách hàng
+        public string CustomerName { get; set; } = "";
+        public string CustomerPhone { get; set; } = "";
+        public string ShippingMethod { get; set; } = "Standard";
+        public decimal PackagingFee { get; set; } = 0;
         public List<OrderDetail> OrderDetails { get; set; } = [];
     }
 }

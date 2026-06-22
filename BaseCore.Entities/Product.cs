@@ -20,6 +20,15 @@ namespace BaseCore.Entities
 
         public string? Environment { get; set; }
 
+        public decimal? TempMin { get; set; }
+        public decimal? TempMax { get; set; }
+        public decimal? PhMin { get; set; }
+        public decimal? PhMax { get; set; }
+        public string? Hardness { get; set; }
+        public string? MaxSize { get; set; }
+        public string? Diet { get; set; }
+        public string? Compatibility { get; set; }
+
         public int MaleStock { get; set; }
 
         public int FemaleStock { get; set; }

@@ -18,5 +18,6 @@ namespace BaseCore.Entities
         public bool IsActive { get; set; }
         public int UserType { get; set; }
         public DateTime Created { get; set; } = DateTime.Now;
+        public int LoyaltyPoints { get; set; } = 0;
     }
 }

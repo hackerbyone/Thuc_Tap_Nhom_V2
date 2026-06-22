@@ -56,4 +56,12 @@ export const orderService = {
     });
     return handleResponse(response, 'Failed to fetch user orders');
   },
+
+  getMyPoints: async () => {
+    const response = await fetch(buildUrl('/api/orders/my-points'), {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+    return handleResponse(response, 'Failed to fetch loyalty points');
+  },
 };

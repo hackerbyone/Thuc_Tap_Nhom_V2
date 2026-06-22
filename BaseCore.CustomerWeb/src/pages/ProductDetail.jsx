@@ -362,8 +362,58 @@ export default function ProductDetail() {
           <div className={styles.tabContent}>
             {tab === 'desc' && <p>{product.description || 'Không có mô tả'}</p>}
             {tab === 'care' && <p>{product.careInstructions || 'Thông tin chăm sóc sẽ được cập nhật'}</p>}
-            {tab === 'habitat' && <p>{product.environment || 'Thông tin môi trường sẽ được cập nhật'}</p>}
-            {tab === 'compatible' && <p>Thông tin nuôi chung sẽ được cập nhật</p>}
+            {tab === 'habitat' && (
+              <div>
+                {product.environment && <p style={{ marginBottom: '1rem' }}>{product.environment}</p>}
+                {(product.tempMin != null || product.tempMax != null || product.phMin != null || product.phMax != null || product.hardness || product.maxSize || product.diet) ? (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem' }}>
+                    <tbody>
+                      {(product.tempMin != null || product.tempMax != null) && (
+                        <tr style={{ borderBottom: '1px solid #eee' }}>
+                          <td style={{ padding: '8px 12px', fontWeight: 600, color: '#555', width: '40%' }}>🌡️ Nhiệt độ</td>
+                          <td style={{ padding: '8px 12px' }}>
+                            {product.tempMin != null && product.tempMax != null ? `${product.tempMin}°C – ${product.tempMax}°C`
+                              : product.tempMin != null ? `≥ ${product.tempMin}°C` : `≤ ${product.tempMax}°C`}
+                          </td>
+                        </tr>
+                      )}
+                      {(product.phMin != null || product.phMax != null) && (
+                        <tr style={{ borderBottom: '1px solid #eee' }}>
+                          <td style={{ padding: '8px 12px', fontWeight: 600, color: '#555' }}>🧪 pH</td>
+                          <td style={{ padding: '8px 12px' }}>
+                            {product.phMin != null && product.phMax != null ? `${product.phMin} – ${product.phMax}`
+                              : product.phMin != null ? `≥ ${product.phMin}` : `≤ ${product.phMax}`}
+                          </td>
+                        </tr>
+                      )}
+                      {product.hardness && (
+                        <tr style={{ borderBottom: '1px solid #eee' }}>
+                          <td style={{ padding: '8px 12px', fontWeight: 600, color: '#555' }}>💧 Độ cứng</td>
+                          <td style={{ padding: '8px 12px' }}>{product.hardness}</td>
+                        </tr>
+                      )}
+                      {product.maxSize && (
+                        <tr style={{ borderBottom: '1px solid #eee' }}>
+                          <td style={{ padding: '8px 12px', fontWeight: 600, color: '#555' }}>📏 Kích thước tối đa</td>
+                          <td style={{ padding: '8px 12px' }}>{product.maxSize}</td>
+                        </tr>
+                      )}
+                      {product.diet && (
+                        <tr>
+                          <td style={{ padding: '8px 12px', fontWeight: 600, color: '#555' }}>🍤 Chế độ ăn</td>
+                          <td style={{ padding: '8px 12px' }}>{product.diet}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                ) : (
+                  !product.environment && <p>Thông tin môi trường sẽ được cập nhật</p>
+                )}
+              </div>
+            )}
+            {tab === 'compatible' && (
+              <p style={{ whiteSpace: 'pre-line' }}>{product.compatibility || 'Thông tin nuôi chung sẽ được cập nhật'}</p>
+            )}
             {tab === 'reviews' && (
               <div>
                 {/* Average rating summary */}

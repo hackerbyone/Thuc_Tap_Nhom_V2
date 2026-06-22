@@ -48,7 +48,7 @@ namespace BaseCore.Services
                 .FirstOrDefaultAsync(o => o.Id == id);
         }
 
-        public async Task<OrderResultDto> CheckoutAsync(string userId, string shippingAddress, string customerName = "", string customerPhone = "", decimal shippingFee = 0)
+        public async Task<OrderResultDto> CheckoutAsync(string userId, string shippingAddress, string customerName = "", string customerPhone = "", decimal shippingFee = 0, string shippingMethod = "Standard", decimal packagingFee = 0)
         {
             var cart = await _cartRepository.GetCartByUserId(userId);
             if (cart == null || !cart.Items.Any())
@@ -91,8 +91,8 @@ namespace BaseCore.Services
                 return unitPrice * item.Quantity;
             });
 
-            // Cộng phí vận chuyển vào tổng cộng
-            decimal totalAmount = productTotal + shippingFee;
+            // Cộng phí vận chuyển và đóng gói vào tổng cộng
+            decimal totalAmount = productTotal + shippingFee + packagingFee;
             decimal depositAmount = Math.Round(totalAmount * 0.5m, 0);
 
             var order = new Order
@@ -105,6 +105,8 @@ namespace BaseCore.Services
                 ShippingAddress = shippingAddress,
                 CustomerName = customerName,
                 CustomerPhone = customerPhone,
+                ShippingMethod = shippingMethod,
+                PackagingFee = packagingFee,
             };
 
             await _context.Orders.AddAsync(order);

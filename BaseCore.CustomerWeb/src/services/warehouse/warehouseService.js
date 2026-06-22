@@ -107,6 +107,28 @@ export const warehouseService = {
     return handleResponse(res, 'Không thể tải lịch sử commit');
   },
 
+  // Lô nhập cá
+  getBatches: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(buildUrl(`/api/warehouse/batches${query ? '?' + query : ''}`), { headers: getHeaders(true) });
+    return handleResponse(res, 'Không thể tải danh sách lô nhập');
+  },
+
+  createBatch: async (data) => {
+    const res = await fetch(buildUrl('/api/warehouse/batches'), { method: 'POST', headers: getHeaders(true), body: JSON.stringify(data) });
+    return handleResponse(res, 'Không thể tạo lô nhập');
+  },
+
+  updateQuarantine: async (id, data) => {
+    const res = await fetch(buildUrl(`/api/warehouse/batches/${id}/quarantine`), { method: 'PUT', headers: getHeaders(true), body: JSON.stringify(data) });
+    return handleResponse(res, 'Không thể cập nhật kiểm dịch');
+  },
+
+  recordBatchLoss: async (id, data) => {
+    const res = await fetch(buildUrl(`/api/warehouse/batches/${id}/loss`), { method: 'POST', headers: getHeaders(true), body: JSON.stringify(data) });
+    return handleResponse(res, 'Không thể ghi nhận hao hụt lô');
+  },
+
   // Báo cáo hao hụt
   getLossReport: async (from = '', to = '', groupBy = 'month') => {
     const params = { groupBy };

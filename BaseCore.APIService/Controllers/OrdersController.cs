@@ -130,6 +130,15 @@ namespace BaseCore.APIService.Controllers
             return Ok(result);
         }
 
+        [HttpGet("my-points")]
+        public async Task<IActionResult> GetMyPoints()
+        {
+            var userId = GetUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+            var pointUser = await _db.Users.FindAsync(userId);
+            return Ok(new { loyaltyPoints = pointUser?.LoyaltyPoints ?? 0 });
+        }
+
         // ✅ Admin: lấy tất cả đơn, có thể filter theo status và userId
         [HttpGet("all")]
         [Authorize(Roles = "Admin")]
@@ -274,6 +283,17 @@ namespace BaseCore.APIService.Controllers
                 return BadRequest(new { message = "Không thể cập nhật đơn đã huỷ" });
             if (order.Status == "Completed")
                 return BadRequest(new { message = "Không thể cập nhật đơn đã hoàn thành" });
+
+            if (dto.Status == "Completed")
+            {
+                var points = (int)(order.TotalAmount / 10000);
+                var orderUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == order.UserId);
+                if (orderUser != null && points > 0)
+                {
+                    orderUser.LoyaltyPoints += points;
+                    await _db.SaveChangesAsync();
+                }
+            }
 
             order.Status = dto.Status;
             await _orderRepository.UpdateAsync(order);

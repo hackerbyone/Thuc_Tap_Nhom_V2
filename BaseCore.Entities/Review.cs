@@ -12,6 +12,7 @@ namespace BaseCore.Entities
         public string Comment { get; set; } = "";
         public string CustomerName { get; set; } = "";
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string? ReviewImageUrl { get; set; }
 
         public virtual Product? Product { get; set; }
     }

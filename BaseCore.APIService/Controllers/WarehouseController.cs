@@ -403,6 +403,103 @@ namespace BaseCore.APIService.Controllers
         }
 
         // ────────────────────────────────────────────────────────────
+        //  LÔ NHẬP CÁ (FishBatch)
+        // ────────────────────────────────────────────────────────────
+
+        [HttpGet("batches")]
+        public async Task<IActionResult> GetBatches(
+            [FromQuery] int? productId,
+            [FromQuery] string? quarantineStatus,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var query = _context.FishBatches.Include(b => b.Product).AsQueryable();
+
+            if (productId.HasValue) query = query.Where(b => b.ProductId == productId.Value);
+            if (!string.IsNullOrWhiteSpace(quarantineStatus)) query = query.Where(b => b.QuarantineStatus == quarantineStatus);
+
+            var total = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(b => b.ImportDate)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(b => new
+                {
+                    b.Id, b.ProductId,
+                    ProductName  = b.Product != null ? b.Product.Name : "",
+                    ProductImage = b.Product != null ? b.Product.ImageUrl : "",
+                    b.OriginFarm, b.ImportDate, b.QuarantineStatus,
+                    b.InitialQuantity, b.CurrentQuantity,
+                    LossAmount = b.InitialQuantity - b.CurrentQuantity,
+                    b.Notes, b.CreatedAt, b.CreatedBy, b.CreatedByName
+                })
+                .ToListAsync();
+
+            return Ok(new { items, total, page, pageSize, totalPages = (int)Math.Ceiling((double)total / pageSize) });
+        }
+
+        [HttpPost("batches")]
+        public async Task<IActionResult> CreateBatch([FromBody] FishBatchRequest req)
+        {
+            var product = await _context.Products.FindAsync(req.ProductId);
+            if (product == null) return BadRequest(new { message = "Sản phẩm không tồn tại" });
+
+            var batch = new FishBatch
+            {
+                ProductId        = req.ProductId,
+                OriginFarm       = req.OriginFarm,
+                ImportDate       = req.ImportDate,
+                QuarantineStatus = req.QuarantineStatus ?? "Pending",
+                InitialQuantity  = req.Quantity,
+                CurrentQuantity  = req.Quantity,
+                Notes            = req.Notes,
+                CreatedAt        = DateTime.Now,
+                CreatedBy        = req.StaffId,
+                CreatedByName    = req.StaffName
+            };
+
+            _context.FishBatches.Add(batch);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { batch.Id, message = $"Đã tạo lô nhập #{batch.Id} — {req.Quantity} con từ trại {req.OriginFarm}" });
+        }
+
+        [HttpPut("batches/{id}/quarantine")]
+        public async Task<IActionResult> UpdateQuarantine(int id, [FromBody] QuarantineUpdateRequest req)
+        {
+            var batch = await _context.FishBatches.FindAsync(id);
+            if (batch == null) return NotFound(new { message = "Không tìm thấy lô" });
+
+            batch.QuarantineStatus = req.Status;
+            if (!string.IsNullOrWhiteSpace(req.Notes)) batch.Notes = req.Notes;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"Đã cập nhật kiểm dịch lô #{id}: {req.Status}" });
+        }
+
+        [HttpPost("batches/{id}/loss")]
+        public async Task<IActionResult> RecordBatchLoss(int id, [FromBody] BatchLossRequest req)
+        {
+            var batch = await _context.FishBatches.FindAsync(id);
+            if (batch == null) return NotFound(new { message = "Không tìm thấy lô" });
+
+            if (req.LossCount < 0) return BadRequest(new { message = "Số hao hụt không được âm" });
+            if (req.LossCount > batch.CurrentQuantity) return BadRequest(new { message = $"Hao hụt vượt quá số hiện có ({batch.CurrentQuantity})" });
+            if (string.IsNullOrWhiteSpace(req.Reason)) return BadRequest(new { message = "Vui lòng nhập lý do" });
+
+            batch.CurrentQuantity -= req.LossCount;
+            await _context.SaveChangesAsync();
+
+            await AddCommit(req.StaffId, req.StaffName,
+                $"Hao hụt lô #{id}: -{req.LossCount} — {req.Reason}",
+                "Fish", batch.ProductId, batch.OriginFarm,
+                JsonSerializer.Serialize(new { currentQuantity = batch.CurrentQuantity + req.LossCount }),
+                JsonSerializer.Serialize(new { currentQuantity = batch.CurrentQuantity }));
+
+            return Ok(new { message = $"Đã ghi nhận -{req.LossCount} con khỏi lô #{id}" });
+        }
+
+        // ────────────────────────────────────────────────────────────
         //  ĐỒNG BỘ KHO TỪ PRODUCTS (category cá: 1, 2)
         // ────────────────────────────────────────────────────────────
 
@@ -766,5 +863,31 @@ namespace BaseCore.APIService.Controllers
         public string StaffId { get; set; } = "";
         public string StaffName { get; set; } = "";
         public string? CommitMessage { get; set; }
+    }
+
+    public class FishBatchRequest
+    {
+        public int ProductId { get; set; }
+        public string OriginFarm { get; set; } = "";
+        public DateTime ImportDate { get; set; }
+        public string? QuarantineStatus { get; set; }
+        public int Quantity { get; set; }
+        public string? Notes { get; set; }
+        public string StaffId { get; set; } = "";
+        public string StaffName { get; set; } = "";
+    }
+
+    public class QuarantineUpdateRequest
+    {
+        public string Status { get; set; } = "Pending";
+        public string? Notes { get; set; }
+    }
+
+    public class BatchLossRequest
+    {
+        public int LossCount { get; set; }
+        public string Reason { get; set; } = "";
+        public string StaffId { get; set; } = "";
+        public string StaffName { get; set; } = "";
     }
 }

@@ -19,6 +19,7 @@ namespace BaseCore.Repository
         public DbSet<TankFishTracking> TankFishTrackings { get; set; }
         public DbSet<Accessory> Accessories { get; set; }
         public DbSet<InventoryCommit> InventoryCommits { get; set; }
+        public DbSet<FishBatch> FishBatches { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -28,6 +29,7 @@ namespace BaseCore.Repository
             modelBuilder.Entity<User>(entity =>
             {
                 entity.Property(e => e.UserName).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.LoyaltyPoints).HasDefaultValue(0);
                 entity.Property(e => e.Password).HasMaxLength(255).IsRequired();
                 entity.Property(e => e.Name).HasMaxLength(100);
                 entity.Property(e => e.Email).HasMaxLength(100);
@@ -55,6 +57,14 @@ namespace BaseCore.Repository
                 entity.Property(e => e.MaleStock).HasDefaultValue(0);
                 entity.Property(e => e.FemaleStock).HasDefaultValue(0);
                 entity.Property(e => e.ImageUrl).HasMaxLength(500);
+                entity.Property(e => e.TempMin).HasPrecision(5, 2);
+                entity.Property(e => e.TempMax).HasPrecision(5, 2);
+                entity.Property(e => e.PhMin).HasPrecision(4, 2);
+                entity.Property(e => e.PhMax).HasPrecision(4, 2);
+                entity.Property(e => e.Hardness).HasMaxLength(100);
+                entity.Property(e => e.MaxSize).HasMaxLength(100);
+                entity.Property(e => e.Diet).HasMaxLength(500);
+                entity.Property(e => e.Compatibility).HasMaxLength(1000);
                 entity.HasOne(e => e.Category)
                       .WithMany()
                       .HasForeignKey(e => e.CategoryId)
@@ -72,6 +82,8 @@ namespace BaseCore.Repository
                 entity.Property(e => e.UserId).HasMaxLength(100).IsRequired();
                 entity.Property(e => e.CustomerName).HasMaxLength(100);
                 entity.Property(e => e.CustomerPhone).HasMaxLength(20);
+                entity.Property(e => e.ShippingMethod).HasMaxLength(50).HasDefaultValue("Standard");
+                entity.Property(e => e.PackagingFee).HasPrecision(18, 2).HasDefaultValue(0m);
 
                 // ✅ Khai báo đúng WithMany → EF biết OrderDetails là collection của Order
                 entity.HasMany(e => e.OrderDetails)
@@ -114,6 +126,7 @@ namespace BaseCore.Repository
                 entity.Property(e => e.UserId).HasMaxLength(100).IsRequired();
                 entity.Property(e => e.CustomerName).HasMaxLength(100);
                 entity.Property(e => e.Comment).HasMaxLength(2000);
+                entity.Property(e => e.ReviewImageUrl).HasMaxLength(500);
                 entity.HasOne(e => e.Product)
                       .WithMany()
                       .HasForeignKey(e => e.ProductId)
@@ -160,6 +173,21 @@ namespace BaseCore.Repository
                       .WithMany()
                       .HasForeignKey(e => e.ProductId)
                       .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // FishBatch
+            modelBuilder.Entity<FishBatch>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.OriginFarm).HasMaxLength(200).IsRequired();
+                entity.Property(e => e.QuarantineStatus).HasMaxLength(50).HasDefaultValue("Pending");
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100);
+                entity.Property(e => e.CreatedByName).HasMaxLength(100);
+                entity.HasOne(e => e.Product)
+                      .WithMany()
+                      .HasForeignKey(e => e.ProductId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             // InventoryCommit

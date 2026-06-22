@@ -37,7 +37,8 @@ namespace BaseCore.APIService.Controllers
                     r.Rating,
                     r.Comment,
                     r.CustomerName,
-                    r.CreatedAt
+                    r.CreatedAt,
+                    r.ReviewImageUrl
                 })
                 .ToListAsync();
 
@@ -119,13 +120,14 @@ namespace BaseCore.APIService.Controllers
 
             var review = new Review
             {
-                ProductId    = productId,
-                UserId       = userId,
-                OrderId      = dto.OrderId,
-                Rating       = dto.Rating,
-                Comment      = dto.Comment?.Trim() ?? "",
-                CustomerName = user?.Name ?? user?.UserName ?? "Khách hàng",
-                CreatedAt    = DateTime.UtcNow
+                ProductId      = productId,
+                UserId         = userId,
+                OrderId        = dto.OrderId,
+                Rating         = dto.Rating,
+                Comment        = dto.Comment?.Trim() ?? "",
+                CustomerName   = user?.Name ?? user?.UserName ?? "Khách hàng",
+                CreatedAt      = DateTime.UtcNow,
+                ReviewImageUrl = dto.ReviewImageUrl?.Trim()
             };
 
             _context.Reviews.Add(review);
@@ -141,7 +143,8 @@ namespace BaseCore.APIService.Controllers
                     review.Rating,
                     review.Comment,
                     review.CustomerName,
-                    review.CreatedAt
+                    review.CreatedAt,
+                    review.ReviewImageUrl
                 }
             });
         }
@@ -161,9 +164,10 @@ namespace BaseCore.APIService.Controllers
 
     public class CreateReviewDto
     {
-        public int? ProductId { get; set; }   // Không cần truyền, lấy từ đơn hàng
-        public int? OrderId { get; set; }      // Bắt buộc — 1 review / 1 đơn
+        public int? ProductId { get; set; }
+        public int? OrderId { get; set; }
         public int Rating { get; set; }
         public string? Comment { get; set; }
+        public string? ReviewImageUrl { get; set; }
     }
 }
