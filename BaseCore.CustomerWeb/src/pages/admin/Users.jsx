@@ -147,8 +147,8 @@ const Users = () => {
     const fetchUserOrders = async (userId) => {
         setUserOrdersLoading(true);
         try {
-            const response = await orderService.getByUserId(userId, 1, 50);
-            setUserOrders(Array.isArray(response) ? response : response.data?.data || response.items || []);
+            const response = await orderService.getByUserIdAdmin(userId);
+            setUserOrders(Array.isArray(response) ? response : []);
         } catch (error) {
             console.error('Failed to fetch user orders:', error);
             setUserOrders([]);

@@ -181,21 +181,21 @@ export default function OrderHistory() {
                       <td className={styles.actionCell}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center' }}>
                           {/* FIX 7: Nút Theo dõi đơn hàng */}
-                          {['WaitingDeposit', 'DepositPaid', 'Processing', 'Shipping'].includes(order.status) && (
-                            <button
-                              onClick={() => navigate(`/payment/${order.id}`)}
-                              className={styles.btnTrack}
-                              title="Theo dõi đơn hàng"
-                            >
-                              📍 Theo dõi
-                            </button>
-                          )}
                           {order.status === 'WaitingDeposit' && (
                             <button
                               onClick={() => navigate(`/payment/${order.id}`)}
                               className={styles.btnPay}
                             >
                               💳 Thanh toán
+                            </button>
+                          )}
+                          {['DepositPaid', 'Processing', 'Shipping'].includes(order.status) && (
+                            <button
+                              onClick={() => navigate(`/payment/${order.id}`)}
+                              className={styles.btnTrack}
+                              title="Theo dõi đơn hàng"
+                            >
+                              📍 Theo dõi
                             </button>
                           )}
                           {order.status === 'WaitingDeposit' && (

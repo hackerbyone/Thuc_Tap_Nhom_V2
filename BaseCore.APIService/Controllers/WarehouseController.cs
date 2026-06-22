@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BaseCore.Entities;
@@ -8,6 +9,7 @@ namespace BaseCore.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin,Warehouse")]
     public class WarehouseController : ControllerBase
     {
         private readonly MySqlDbContext _context;

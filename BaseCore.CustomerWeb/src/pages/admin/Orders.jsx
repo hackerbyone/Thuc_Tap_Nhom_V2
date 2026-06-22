@@ -402,7 +402,7 @@ export default function Orders() {
                                   <option key={s.value} value={s.value}>{s.label}</option>
                                 ))}
                               </select>
-                              {['WaitingDeposit', 'DepositPaid', 'Processing'].includes(order.status) && (
+                              {order.status === 'WaitingDeposit' && (
                                 <button className="btn btn-sm btn-danger" onClick={() => handleCancel(order.id)} disabled={updating} title="Hủy đơn">
                                   <i className="fas fa-times"></i>
                                 </button>
