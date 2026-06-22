@@ -9,20 +9,20 @@ export const reviewService = {
     return handleResponse(res, 'Failed to fetch reviews');
   },
 
-  // Lấy danh sách orderId mà user đã đánh giá
-  getMyReviewedOrders: async () => {
-    const res = await fetch(buildUrl('/api/reviews/my-reviewed-orders'), {
+  // Lấy danh sách {orderId, productId} mà user đã đánh giá
+  getMyReviewedProducts: async () => {
+    const res = await fetch(buildUrl('/api/reviews/my-reviewed-products'), {
       headers: getHeaders(true),
     });
-    return handleResponse(res, 'Failed to fetch reviewed orders');
+    return handleResponse(res, 'Failed to fetch reviewed products');
   },
 
-  // Tạo đánh giá mới — truyền orderId (bắt buộc), không cần productId
-  create: async ({ orderId, rating, comment, reviewImageUrl }) => {
+  // Tạo đánh giá cho 1 sản phẩm trong đơn hàng
+  create: async ({ orderId, productId, rating, comment, reviewImageUrl }) => {
     const res = await fetch(buildUrl('/api/reviews'), {
       method: 'POST',
       headers: getHeaders(true),
-      body: JSON.stringify({ orderId, rating, comment, reviewImageUrl }),
+      body: JSON.stringify({ orderId, productId, rating, comment, reviewImageUrl }),
     });
     return handleResponse(res, 'Failed to submit review');
   },

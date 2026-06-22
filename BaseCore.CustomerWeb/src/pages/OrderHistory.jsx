@@ -27,8 +27,11 @@ export default function OrderHistory() {
 
   const [loyaltyPoints, setLoyaltyPoints] = useState(null);
 
-  const [reviewedOrderIds, setReviewedOrderIds] = useState(new Set());
+  // reviewedProductKeys: Set của "orderId_productId" đã được đánh giá
+  const [reviewedProductKeys, setReviewedProductKeys] = useState(new Set());
   const [reviewOrderId, setReviewOrderId] = useState(null);
+  const [reviewProductId, setReviewProductId] = useState(null);
+  const [reviewProductName, setReviewProductName] = useState('');
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '', reviewImageUrl: '' });
@@ -51,10 +54,10 @@ export default function OrderHistory() {
     }
   };
 
-  const fetchReviewedOrders = async () => {
+  const fetchReviewedProducts = async () => {
     try {
-      const ids = await reviewService.getMyReviewedOrders();
-      setReviewedOrderIds(new Set(ids));
+      const pairs = await reviewService.getMyReviewedProducts();
+      setReviewedProductKeys(new Set(pairs.map(p => `${p.orderId}_${p.productId}`)));
     } catch { }
   };
 
@@ -66,7 +69,7 @@ export default function OrderHistory() {
   };
 
   useEffect(() => {
-    if (user) { fetchOrders(); fetchReviewedOrders(); fetchLoyaltyPoints(); }
+    if (user) { fetchOrders(); fetchReviewedProducts(); fetchLoyaltyPoints(); }
   }, [user]);
 
   const toggleExpand = (orderId) => {
@@ -89,8 +92,10 @@ export default function OrderHistory() {
     }
   };
 
-  const openReviewModal = (orderId) => {
+  const openReviewModal = (orderId, productId, productName) => {
     setReviewOrderId(orderId);
+    setReviewProductId(productId);
+    setReviewProductName(productName);
     setReviewForm({ rating: 5, comment: '', reviewImageUrl: '' });
     setReviewImageFile(null);
     setReviewImagePreview('');
@@ -100,7 +105,12 @@ export default function OrderHistory() {
     setShowReviewModal(true);
   };
 
-  const closeReviewModal = () => { setShowReviewModal(false); setReviewOrderId(null); };
+  const closeReviewModal = () => {
+    setShowReviewModal(false);
+    setReviewOrderId(null);
+    setReviewProductId(null);
+    setReviewProductName('');
+  };
 
   const handleReviewImageChange = async (e) => {
     const file = e.target.files[0];
@@ -129,10 +139,16 @@ export default function OrderHistory() {
     setReviewLoading(true);
     setReviewError('');
     try {
-      await reviewService.create({ orderId: reviewOrderId, rating: reviewForm.rating, comment: reviewForm.comment, reviewImageUrl: reviewForm.reviewImageUrl || undefined });
+      await reviewService.create({
+        orderId: reviewOrderId,
+        productId: reviewProductId,
+        rating: reviewForm.rating,
+        comment: reviewForm.comment,
+        reviewImageUrl: reviewForm.reviewImageUrl || undefined,
+      });
       setReviewSuccess(true);
       setShowWarning(false);
-      setReviewedOrderIds(prev => new Set([...prev, reviewOrderId]));
+      setReviewedProductKeys(prev => new Set([...prev, `${reviewOrderId}_${reviewProductId}`]));
     } catch (err) {
       setReviewError(err.message || 'Gửi đánh giá thất bại');
       setShowWarning(false);
@@ -185,19 +201,22 @@ export default function OrderHistory() {
                 <th>Ngày đặt</th>
                 <th>Tổng tiền</th>
                 <th>Trạng thái</th>
-                {/* FIX 7: đổi tên cột rõ hơn */}
                 <th>Hành động</th>
               </tr>
             </thead>
             <tbody>
               {orders.map(order => {
                 const isExpanded = expandedOrders.has(order.id);
-                const canReview = REVIEWABLE_STATUSES.includes(order.status) && !reviewedOrderIds.has(order.id);
-                const hasReviewed = REVIEWABLE_STATUSES.includes(order.status) && reviewedOrderIds.has(order.id);
                 const itemCount = order.items?.length ?? 0;
+                const isReviewable = REVIEWABLE_STATUSES.includes(order.status);
+                const hasUnreviewed = isReviewable && order.items?.some(
+                  item => !reviewedProductKeys.has(`${order.id}_${item.productId}`)
+                );
+                const allReviewed = isReviewable && itemCount > 0 && order.items?.every(
+                  item => reviewedProductKeys.has(`${order.id}_${item.productId}`)
+                );
 
                 return (
-                  // FIX 6: dùng React.Fragment với key để tránh lệch dòng
                   <React.Fragment key={order.id}>
                     <tr>
                       <td style={{ textAlign: 'center', padding: '10px 6px' }}>
@@ -226,10 +245,8 @@ export default function OrderHistory() {
                       <td style={{ whiteSpace: 'nowrap' }}>{parseUtcDate(order.orderDate).toLocaleString('vi-VN')}</td>
                       <td className={styles.totalAmount}>{formatPrice(order.totalAmount)}</td>
                       <td>{renderStatus(order.status)}</td>
-                      {/* FIX 6+7: fix lệch - dùng div flex wrap, thêm nút Theo dõi đơn hàng */}
                       <td className={styles.actionCell}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center' }}>
-                          {/* FIX 7: Nút Theo dõi đơn hàng */}
                           {order.status === 'WaitingDeposit' && (
                             <button
                               onClick={() => navigate(`/payment/${order.id}`)}
@@ -248,21 +265,24 @@ export default function OrderHistory() {
                             </button>
                           )}
                           {order.status === 'WaitingDeposit' && (
-                              <button onClick={() => handleCancelOrder(order.id)} className={styles.btnCancel}>
-                                ✕ Hủy đơn
-                              </button>
-                            )}
-                          {canReview && (
-                            <button onClick={() => openReviewModal(order.id)} className={styles.btnReview}>
+                            <button onClick={() => handleCancelOrder(order.id)} className={styles.btnCancel}>
+                              ✕ Hủy đơn
+                            </button>
+                          )}
+                          {hasUnreviewed && (
+                            <button
+                              onClick={() => { if (!expandedOrders.has(order.id)) toggleExpand(order.id); }}
+                              className={styles.btnReview}
+                              title="Mở rộng để đánh giá từng sản phẩm"
+                            >
                               ⭐ Đánh giá
                             </button>
                           )}
-                          {hasReviewed && <span className={styles.reviewed}>✓ Đã đánh giá</span>}
+                          {allReviewed && <span className={styles.reviewed}>✓ Đã đánh giá</span>}
                         </div>
                       </td>
                     </tr>
 
-                    {/* FIX 6: hàng mở rộng dùng React.Fragment nên key đúng, không lệch */}
                     {isExpanded && itemCount > 0 && (
                       <tr className={styles.detailRow}>
                         <td colSpan={6} style={{ padding: 0, background: '#f9fafb' }}>
@@ -275,28 +295,45 @@ export default function OrderHistory() {
                               </div>
                             )}
 
-                            {order.items.map((item, idx) => (
-                              <div key={idx} className={styles.itemRow}>
-                                {item.productImage
-                                  ? <img src={item.productImage} alt={item.productName} className={styles.itemImg} onError={e => { e.target.style.display = 'none' }} />
-                                  : <div className={styles.itemImgPlaceholder}>🐟</div>
-                                }
-                                <div className={styles.itemInfo}>
-                                  <Link to={`/product/${item.productId}`} className={styles.itemName}>
-                                    {item.productName}
-                                  </Link>
-                                  {item.selectedGender && (
-                                    <span className={styles.itemGender}>
-                                      {item.selectedGender === 'Đực' ? '♂ Con đực'
-                                        : item.selectedGender === 'Cái' ? '♀ Con cái'
-                                        : '⚤ Cặp đôi'}
-                                    </span>
+                            {order.items.map((item, idx) => {
+                              const isProductReviewed = reviewedProductKeys.has(`${order.id}_${item.productId}`);
+                              return (
+                                <div key={idx} className={styles.itemRow}>
+                                  {item.productImage
+                                    ? <img src={item.productImage} alt={item.productName} className={styles.itemImg} onError={e => { e.target.style.display = 'none' }} />
+                                    : <div className={styles.itemImgPlaceholder}>🐟</div>
+                                  }
+                                  <div className={styles.itemInfo}>
+                                    <Link to={`/product/${item.productId}`} className={styles.itemName}>
+                                      {item.productName}
+                                    </Link>
+                                    {item.selectedGender && (
+                                      <span className={styles.itemGender}>
+                                        {item.selectedGender === 'Đực' ? '♂ Con đực'
+                                          : item.selectedGender === 'Cái' ? '♀ Con cái'
+                                          : '⚤ Cặp đôi'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className={styles.itemQty}>× {item.quantity}</div>
+                                  <div className={styles.itemPrice}>{formatPrice(item.unitPrice * item.quantity)}</div>
+                                  {isReviewable && (
+                                    <div style={{ marginLeft: '0.5rem' }}>
+                                      {isProductReviewed
+                                        ? <span style={{ fontSize: '0.78rem', color: '#059669', fontWeight: 600, whiteSpace: 'nowrap' }}>✓ Đã đánh giá</span>
+                                        : <button
+                                            onClick={() => openReviewModal(order.id, item.productId, item.productName)}
+                                            className={styles.btnReview}
+                                            style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem', whiteSpace: 'nowrap' }}
+                                          >
+                                            ⭐ Đánh giá
+                                          </button>
+                                      }
+                                    </div>
                                   )}
                                 </div>
-                                <div className={styles.itemQty}>× {item.quantity}</div>
-                                <div className={styles.itemPrice}>{formatPrice(item.unitPrice * item.quantity)}</div>
-                              </div>
-                            ))}
+                              );
+                            })}
 
                             <div className={styles.itemTotal}>
                               <span>Tổng cộng:</span>
@@ -327,8 +364,9 @@ export default function OrderHistory() {
 
             {!showWarning && !reviewSuccess && (
               <>
-                <h3 style={{ margin: '0 0 0.4rem', fontSize: '1.2rem' }}>⭐ Đánh giá đơn hàng #{reviewOrderId}</h3>
-                <p style={{ margin: '0 0 1.2rem', fontSize: '0.88rem', color: '#888' }}>Chia sẻ cảm nhận giúp chúng tôi phục vụ bạn tốt hơn</p>
+                <h3 style={{ margin: '0 0 0.2rem', fontSize: '1.2rem' }}>⭐ Đánh giá sản phẩm</h3>
+                <p style={{ margin: '0 0 0.2rem', fontSize: '0.95rem', fontWeight: 600, color: '#374151' }}>{reviewProductName}</p>
+                <p style={{ margin: '0 0 1.2rem', fontSize: '0.85rem', color: '#9ca3af' }}>Đơn hàng #{reviewOrderId}</p>
                 <div style={{ marginBottom: '1.1rem' }}>
                   <p style={{ margin: '0 0 0.4rem', fontWeight: 600 }}>Số sao:</p>
                   <div style={{ display: 'flex', gap: '0.3rem' }}>
@@ -341,7 +379,7 @@ export default function OrderHistory() {
                 <div style={{ marginBottom: '1.1rem' }}>
                   <p style={{ margin: '0 0 0.4rem', fontWeight: 600 }}>Nhận xét:</p>
                   <textarea value={reviewForm.comment} onChange={e => setReviewForm(f => ({ ...f, comment: e.target.value }))}
-                    placeholder="Chia sẻ cảm nhận về sản phẩm, dịch vụ..." rows={4}
+                    placeholder="Chia sẻ cảm nhận về sản phẩm..." rows={4}
                     style={{ width: '100%', padding: '0.75rem', borderRadius: 8, border: '1px solid #ddd', fontSize: '0.93rem', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }} />
                 </div>
                 <div style={{ marginBottom: '1.1rem' }}>
@@ -374,6 +412,7 @@ export default function OrderHistory() {
                   <p style={{ margin: 0, color: '#78350f', lineHeight: 1.7, fontWeight: 500 }}>Chúng tôi sẽ giải quyết và hoàn tiền 100%, nhưng nếu bạn xác nhận chia sẻ đánh giá tôi sẽ không giải quyết vấn đề bạn gặp.</p>
                 </div>
                 <div style={{ background: '#f7f7f7', borderRadius: 8, padding: '0.9rem 1rem', marginBottom: '1.2rem' }}>
+                  <p style={{ margin: '0 0 0.3rem', fontSize: '0.88rem', color: '#6b7280' }}>{reviewProductName}</p>
                   <div style={{ fontSize: '1.1rem', marginBottom: '0.3rem' }}>
                     <span style={{ color: '#f59e0b' }}>{'★'.repeat(reviewForm.rating)}</span>
                     <span style={{ color: '#d1d5db' }}>{'☆'.repeat(5 - reviewForm.rating)}</span>
@@ -398,7 +437,7 @@ export default function OrderHistory() {
               <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
                 <div style={{ fontSize: '3.5rem', marginBottom: '0.8rem' }}>✅</div>
                 <h3 style={{ margin: '0 0 0.5rem' }}>Đã gửi đánh giá!</h3>
-                <p style={{ color: '#666', margin: '0 0 1.5rem' }}>Cảm ơn bạn đã chia sẻ cảm nhận về đơn hàng #{reviewOrderId}.</p>
+                <p style={{ color: '#666', margin: '0 0 1.5rem' }}>Cảm ơn bạn đã đánh giá <strong>{reviewProductName}</strong>.</p>
                 <button onClick={closeReviewModal} style={{ padding: '0.65rem 1.8rem', borderRadius: 8, border: 'none', background: 'var(--teal,#2a9d8f)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>Đóng</button>
               </div>
             )}

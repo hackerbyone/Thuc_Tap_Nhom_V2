@@ -59,23 +59,23 @@ namespace BaseCore.APIService.Controllers
             });
         }
 
-        // ── GET /api/reviews/my-reviewed-orders — Danh sách orderId đã được user đánh giá ──
-        [HttpGet("my-reviewed-orders")]
+        // ── GET /api/reviews/my-reviewed-products — List {orderId, productId} đã review ──
+        [HttpGet("my-reviewed-products")]
         [Authorize]
-        public async Task<IActionResult> MyReviewedOrders()
+        public async Task<IActionResult> MyReviewedProducts()
         {
             var userId = GetUserId();
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-            var orderIds = await _context.Reviews
+            var pairs = await _context.Reviews
                 .Where(r => r.UserId == userId && r.OrderId != null)
-                .Select(r => r.OrderId!.Value)
+                .Select(r => new { orderId = r.OrderId!.Value, productId = r.ProductId })
                 .ToListAsync();
 
-            return Ok(orderIds);
+            return Ok(pairs);
         }
 
-        // ── POST /api/reviews — Tạo đánh giá mới (1 lần / 1 đơn hàng) ──
+        // ── POST /api/reviews — Tạo đánh giá cho 1 sản phẩm trong đơn hàng ──
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> Create([FromBody] CreateReviewDto dto)
@@ -89,38 +89,36 @@ namespace BaseCore.APIService.Controllers
             if (dto.OrderId == null)
                 return BadRequest(new { message = "Thiếu mã đơn hàng" });
 
-            // Lấy thông tin đơn hàng + sản phẩm đầu tiên (verify đơn thuộc về user này)
-            var orderDetails = await _context.Set<OrderDetail>()
+            if (!dto.ProductId.HasValue)
+                return BadRequest(new { message = "Thiếu mã sản phẩm" });
+
+            // Verify đơn hàng thuộc về user và chứa đúng sản phẩm này
+            var orderDetail = await _context.Set<OrderDetail>()
                 .Where(d => d.Order != null
                          && d.Order.Id == dto.OrderId.Value
-                         && d.Order.UserId == userId)
-                .Select(d => new { d.ProductId, Status = d.Order!.Status })
-                .ToListAsync();
+                         && d.Order.UserId == userId
+                         && d.ProductId == dto.ProductId.Value)
+                .Select(d => new { Status = d.Order!.Status })
+                .FirstOrDefaultAsync();
 
-            if (orderDetails.Count == 0)
-                return BadRequest(new { message = "Không tìm thấy đơn hàng hoặc đơn hàng không thuộc về bạn" });
+            if (orderDetail == null)
+                return BadRequest(new { message = "Không tìm thấy sản phẩm trong đơn hàng hoặc đơn hàng không thuộc về bạn" });
 
-            var orderStatus = orderDetails[0].Status;
-            if (orderStatus != "Completed")
+            if (orderDetail.Status != "Completed")
                 return BadRequest(new { message = "Chỉ có thể đánh giá khi đơn hàng đã hoàn thành" });
 
-            // Kiểm tra đơn hàng này đã được đánh giá chưa (unique per orderId)
+            // Kiểm tra (orderId, productId) đã được đánh giá chưa
             var alreadyReviewed = await _context.Reviews
-                .AnyAsync(r => r.OrderId == dto.OrderId.Value);
+                .AnyAsync(r => r.OrderId == dto.OrderId.Value && r.ProductId == dto.ProductId.Value);
 
             if (alreadyReviewed)
-                return BadRequest(new { message = "Đơn hàng này đã được đánh giá rồi" });
-
-            // Dùng productId từ request nếu hợp lệ (có trong đơn), nếu không thì dùng sản phẩm đầu tiên
-            var productId = (dto.ProductId.HasValue && orderDetails.Any(d => d.ProductId == dto.ProductId.Value))
-                ? dto.ProductId.Value
-                : orderDetails[0].ProductId;
+                return BadRequest(new { message = "Sản phẩm này trong đơn hàng đã được đánh giá rồi" });
 
             var user = await _context.Users.FindAsync(userId);
 
             var review = new Review
             {
-                ProductId      = productId,
+                ProductId      = dto.ProductId.Value,
                 UserId         = userId,
                 OrderId        = dto.OrderId,
                 Rating         = dto.Rating,
