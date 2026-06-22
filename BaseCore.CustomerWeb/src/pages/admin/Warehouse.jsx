@@ -391,10 +391,13 @@ export default function Warehouse() {
 
                 <div className="d-flex justify-content-between align-items-center mt-2">
                   <small className="text-muted">Tổng: {tanksTotal} bể</small>
-                  <div>
+                  <div className="d-flex align-items-center">
                     <button className="btn btn-sm btn-light mr-1" disabled={tankPage <= 1}
                       onClick={() => setTankPage(p => p - 1)}>&laquo;</button>
-                    <button className="btn btn-sm btn-light" disabled={tanks.length < 20}
+                    <span className="mx-2 text-muted" style={{ fontSize: '0.85rem' }}>
+                      Trang {tankPage} / {Math.max(1, Math.ceil(tanksTotal / 21))}
+                    </span>
+                    <button className="btn btn-sm btn-light" disabled={tanks.length < 21}
                       onClick={() => setTankPage(p => p + 1)}>&raquo;</button>
                   </div>
                 </div>

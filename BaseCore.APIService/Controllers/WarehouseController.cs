@@ -22,7 +22,7 @@ namespace BaseCore.APIService.Controllers
         // ────────────────────────────────────────────────────────────
 
         [HttpGet("tanks")]
-        public async Task<IActionResult> GetTanks([FromQuery] string? keyword, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        public async Task<IActionResult> GetTanks([FromQuery] string? keyword, [FromQuery] int page = 1, [FromQuery] int pageSize = 21)
         {
             var query = _context.TankFishTrackings
                 .Include(t => t.Product)
