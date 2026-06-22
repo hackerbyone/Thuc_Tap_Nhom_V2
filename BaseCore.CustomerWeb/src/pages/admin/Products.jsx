@@ -330,43 +330,48 @@ const Products = () => {
                                                             <td><strong>{product.name}</strong></td>
                                                             <td>
                                                                 <span className="badge badge-light" style={{ background: '#e8f4fd', color: '#3d8bc2', border: '1px solid #a8d5f0' }}>
+                                                                    {categories.find(cat => cat.id === product.categoryId)?.name || product.category?.name || '—'}
+
                                                                     {getProductCategoryName(product)}
+
                                                                 </span>
-                                                            </td>
-                                                            <td className="font-weight-bold text-danger">
+                                                                <span className="text-muted float-right" style={{ fontSize: '0.7rem' }}>#{product.id}</span>
+                                                            </div>
+                                                            <div style={{ fontWeight: 700, fontSize: '0.88rem', lineHeight: '1.35', marginBottom: '8px', display: 'block', width: '100%' }}>
+                                                                {product.name}
+                                                            </div>
+                                                            <div style={{ fontWeight: 700, color: '#dc3545', fontSize: '0.95rem', display: 'block', width: '100%', marginBottom: '6px' }}>
                                                                 {product.price?.toLocaleString('vi-VN')} đ
-                                                            </td>
-                                                            <td>
-                                                                <span className={`badge ${product.stock > 10 ? 'badge-success' : product.stock > 0 ? 'badge-warning' : 'badge-danger'}`}>
-                                                                    {product.stock}
-                                                                </span>
-                                                            </td>
-                                                            {isAdmin() && (
-                                                                <td>
-                                                                    <button
-                                                                        className="btn btn-xs btn-warning mr-1"
-                                                                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                                                                        onClick={() => openModal(product)}
-                                                                        title="Chỉnh sửa"
-                                                                    >
-                                                                        <i className="fas fa-edit"></i>
-                                                                    </button>
-                                                                    <button
-                                                                        className="btn btn-xs btn-danger"
-                                                                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                                                                        onClick={() => handleDelete(product.id)}
-                                                                        title="Xóa"
-                                                                    >
-                                                                        <i className="fas fa-trash"></i>
-                                                                    </button>
-                                                                </td>
-                                                            )}
-                                                        </tr>
-                                                    ))
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                            </div>
+                                                            <span className={`badge ${product.stock > 10 ? 'badge-success' : product.stock > 0 ? 'badge-warning' : 'badge-danger'}`}>
+                                                                Kho: {product.stock}
+                                                            </span>
+                                                        </div>
+                                                        {isAdmin() && (
+                                                            <div className="card-footer p-0 d-flex" style={{ borderTop: '1px solid #e0eaf3' }}>
+                                                                <button
+                                                                    className="btn btn-warning flex-fill"
+                                                                    style={{ borderRadius: 0, borderRight: '1px solid #e0eaf3', fontSize: '0.8rem', padding: '0.45rem' }}
+                                                                    onClick={() => openModal(product)}
+                                                                    title="Chỉnh sửa"
+                                                                >
+                                                                    <i className="fas fa-edit mr-1"></i> Sửa
+                                                                </button>
+                                                                <button
+                                                                    className="btn btn-danger flex-fill"
+                                                                    style={{ borderRadius: 0, fontSize: '0.8rem', padding: '0.45rem' }}
+                                                                    onClick={() => handleDelete(product.id)}
+                                                                    title="Xóa"
+                                                                >
+                                                                    <i className="fas fa-trash mr-1"></i> Xóa
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
 
                                     <div className="d-flex justify-content-between align-items-center mt-3">
                                         <span className="text-muted">

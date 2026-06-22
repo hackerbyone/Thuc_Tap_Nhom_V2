@@ -130,15 +130,18 @@ namespace BaseCore.APIService.Controllers
             return Ok(result);
         }
 
-        // ✅ Admin: lấy tất cả đơn, có thể filter theo status
+        // ✅ Admin: lấy tất cả đơn, có thể filter theo status và userId
         [HttpGet("all")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetAllOrders([FromQuery] string? status)
+        public async Task<IActionResult> GetAllOrders([FromQuery] string? status, [FromQuery] string? userId)
         {
             var orders = await _orderRepository.GetAllAsync();
 
             if (!string.IsNullOrEmpty(status))
                 orders = orders.Where(o => o.Status == status).ToList();
+
+            if (!string.IsNullOrEmpty(userId))
+                orders = orders.Where(o => o.UserId == userId).ToList();
 
             return Ok(orders);
         }
@@ -297,6 +300,9 @@ namespace BaseCore.APIService.Controllers
         [HttpPut("{id}/cancel")]
         public async Task<IActionResult> CancelOrder(int id)
         {
+            var userId = GetUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
             var order = await _orderRepository.GetByIdAsync(id);
             if (order == null) return NotFound(new { message = "Order not found" });
 
