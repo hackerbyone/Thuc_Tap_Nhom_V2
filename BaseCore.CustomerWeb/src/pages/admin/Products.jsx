@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { productService } from '../../services/product/productService'; 
+import { productService } from '../../services/product/productService';
 import { categoryService } from '../../services/category/categoryService';
 import { uploadService } from '../../services/upload/uploadService';
 import { useAuth } from '../../context/AuthContext';
@@ -135,7 +135,6 @@ const Products = () => {
         const genderTotal = maleStock + femaleStock;
         const isGenderProduct = maleStock > 0 || femaleStock > 0;
 
-        // Validation: khi dùng gender, tổng đực + cái phải BẰNG tổng kho (nếu stock > 0)
         if (isGenderProduct && stock > 0 && stock !== genderTotal) {
             const diff = stock - genderTotal;
             setError(
@@ -150,7 +149,6 @@ const Products = () => {
             const data = {
                 ...formData,
                 price: parseFloat(formData.price),
-                // Khi dùng gender: stock = tổng gender (auto-sync, không phụ thuộc ô nhập)
                 stock: isGenderProduct ? genderTotal : stock,
                 categoryId: parseInt(formData.categoryId),
                 maleStock,
@@ -330,48 +328,41 @@ const Products = () => {
                                                             <td><strong>{product.name}</strong></td>
                                                             <td>
                                                                 <span className="badge badge-light" style={{ background: '#e8f4fd', color: '#3d8bc2', border: '1px solid #a8d5f0' }}>
-                                                                    {categories.find(cat => cat.id === product.categoryId)?.name || product.category?.name || '—'}
-
                                                                     {getProductCategoryName(product)}
-
                                                                 </span>
-                                                                <span className="text-muted float-right" style={{ fontSize: '0.7rem' }}>#{product.id}</span>
-                                                            </div>
-                                                            <div style={{ fontWeight: 700, fontSize: '0.88rem', lineHeight: '1.35', marginBottom: '8px', display: 'block', width: '100%' }}>
-                                                                {product.name}
-                                                            </div>
-                                                            <div style={{ fontWeight: 700, color: '#dc3545', fontSize: '0.95rem', display: 'block', width: '100%', marginBottom: '6px' }}>
+                                                            </td>
+                                                            <td style={{ fontWeight: 700, color: '#dc3545' }}>
                                                                 {product.price?.toLocaleString('vi-VN')} đ
-                                                            </div>
-                                                            <span className={`badge ${product.stock > 10 ? 'badge-success' : product.stock > 0 ? 'badge-warning' : 'badge-danger'}`}>
-                                                                Kho: {product.stock}
-                                                            </span>
-                                                        </div>
-                                                        {isAdmin() && (
-                                                            <div className="card-footer p-0 d-flex" style={{ borderTop: '1px solid #e0eaf3' }}>
-                                                                <button
-                                                                    className="btn btn-warning flex-fill"
-                                                                    style={{ borderRadius: 0, borderRight: '1px solid #e0eaf3', fontSize: '0.8rem', padding: '0.45rem' }}
-                                                                    onClick={() => openModal(product)}
-                                                                    title="Chỉnh sửa"
-                                                                >
-                                                                    <i className="fas fa-edit mr-1"></i> Sửa
-                                                                </button>
-                                                                <button
-                                                                    className="btn btn-danger flex-fill"
-                                                                    style={{ borderRadius: 0, fontSize: '0.8rem', padding: '0.45rem' }}
-                                                                    onClick={() => handleDelete(product.id)}
-                                                                    title="Xóa"
-                                                                >
-                                                                    <i className="fas fa-trash mr-1"></i> Xóa
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                                            </td>
+                                                            <td>
+                                                                <span className={`badge ${product.stock > 10 ? 'badge-success' : product.stock > 0 ? 'badge-warning' : 'badge-danger'}`}>
+                                                                    {product.stock}
+                                                                </span>
+                                                            </td>
+                                                            {isAdmin() && (
+                                                                <td className="text-center">
+                                                                    <button
+                                                                        className="btn btn-warning btn-xs mr-1"
+                                                                        onClick={() => openModal(product)}
+                                                                        title="Chỉnh sửa"
+                                                                    >
+                                                                        <i className="fas fa-edit"></i>
+                                                                    </button>
+                                                                    <button
+                                                                        className="btn btn-danger btn-xs"
+                                                                        onClick={() => handleDelete(product.id)}
+                                                                        title="Xóa"
+                                                                    >
+                                                                        <i className="fas fa-trash"></i>
+                                                                    </button>
+                                                                </td>
+                                                            )}
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
 
                                     <div className="d-flex justify-content-between align-items-center mt-3">
                                         <span className="text-muted">
@@ -400,7 +391,6 @@ const Products = () => {
                 </div>
             </section>
 
-            {/* Modal Thêm/Sửa */}
             {showModal && createPortal(
                 <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
                     <div className="modal-dialog modal-lg modal-dialog-scrollable">
