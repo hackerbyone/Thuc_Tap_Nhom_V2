@@ -264,8 +264,17 @@ using (var scope = app.Services.CreateScope())
                 CREATE UNIQUE INDEX UIX_Accessories_ProductId ON Accessories(ProductId) WHERE ProductId IS NOT NULL AND IsActive = 1;
         ");
 
-        // Thêm UserType 3 = Warehouse nếu cần (chỉ cần về schema, không cần migration riêng)
-        // UserType trong Users đã là int - không cần thay đổi bảng
+        // Cột LoyaltyPoints trong Users (migration AddAllNewFeatures)
+        db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='Users' AND COLUMN_NAME='LoyaltyPoints')
+                ALTER TABLE Users ADD LoyaltyPoints int NOT NULL DEFAULT 0;
+        ");
+
+        // Cột ReviewImageUrl trong Reviews (migration AddAllNewFeatures)
+        db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='Reviews' AND COLUMN_NAME='ReviewImageUrl')
+                ALTER TABLE Reviews ADD ReviewImageUrl nvarchar(500) NULL;
+        ");
 
         Console.WriteLine("✅ Schema update: OK");
     }
