@@ -57,11 +57,11 @@ export const orderService = {
     return handleResponse(response, 'Failed to fetch user orders');
   },
 
-  getMyPoints: async () => {
-    const response = await fetch(buildUrl('/api/orders/my-points'), {
-      method: 'GET',
+  confirmReceived: async (id) => {
+    const response = await fetch(buildUrl(`/api/orders/${id}/confirm-received`), {
+      method: 'PUT',
       headers: getHeaders(true),
     });
-    return handleResponse(response, 'Failed to fetch loyalty points');
+    return handleResponse(response, 'Failed to confirm order received');
   },
 };

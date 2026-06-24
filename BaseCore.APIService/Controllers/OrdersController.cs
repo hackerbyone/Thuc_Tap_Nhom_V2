@@ -130,15 +130,6 @@ namespace BaseCore.APIService.Controllers
             return Ok(result);
         }
 
-        [HttpGet("my-points")]
-        public async Task<IActionResult> GetMyPoints()
-        {
-            var userId = GetUserId();
-            if (string.IsNullOrEmpty(userId)) return Unauthorized();
-            var pointUser = await _db.Users.FindAsync(userId);
-            return Ok(new { loyaltyPoints = pointUser?.LoyaltyPoints ?? 0 });
-        }
-
         // ✅ Admin: lấy tất cả đơn, có thể filter theo status và userId
         [HttpGet("all")]
         [Authorize(Roles = "Admin")]
@@ -266,13 +257,13 @@ namespace BaseCore.APIService.Controllers
                 new { order, details = orderDetails });
         }
 
-        // Cập nhật trạng thái đơn hàng
-        // Flow: WaitingDeposit → DepositPaid → Processing → Shipping → Completed / Cancelled
+        // Cập nhật trạng thái đơn hàng (Admin)
+        // Flow: WaitingDeposit → DepositPaid → Processing → Shipping → Delivered → (User xác nhận) → Completed / Cancelled
         [HttpPut("{id}/status")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusDto dto)
         {
-            var validStatuses = new[] { "WaitingDeposit", "DepositPaid", "Processing", "Shipping", "Completed", "Cancelled" };
+            var validStatuses = new[] { "WaitingDeposit", "DepositPaid", "Processing", "Shipping", "Delivered", "Cancelled" };
             if (!validStatuses.Contains(dto.Status))
                 return BadRequest(new { message = $"Trạng thái không hợp lệ. Chỉ chấp nhận: {string.Join(", ", validStatuses)}" });
 
@@ -283,17 +274,6 @@ namespace BaseCore.APIService.Controllers
                 return BadRequest(new { message = "Không thể cập nhật đơn đã huỷ" });
             if (order.Status == "Completed")
                 return BadRequest(new { message = "Không thể cập nhật đơn đã hoàn thành" });
-
-            if (dto.Status == "Completed")
-            {
-                var points = (int)(order.TotalAmount / 10000);
-                var orderUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == order.UserId);
-                if (orderUser != null && points > 0)
-                {
-                    orderUser.LoyaltyPoints += points;
-                    await _db.SaveChangesAsync();
-                }
-            }
 
             order.Status = dto.Status;
             await _orderRepository.UpdateAsync(order);
@@ -314,6 +294,28 @@ namespace BaseCore.APIService.Controllers
             });
 
             return Ok(order);
+        }
+
+        // User xác nhận đã nhận hàng (Delivered → Completed)
+        [HttpPut("{id}/confirm-received")]
+        public async Task<IActionResult> ConfirmReceived(int id)
+        {
+            var userId = GetUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var order = await _orderRepository.GetByIdAsync(id);
+            if (order == null) return NotFound(new { message = "Order not found" });
+
+            if (order.UserId != userId)
+                return Forbid();
+
+            if (order.Status != "Delivered")
+                return BadRequest(new { message = "Chỉ có thể xác nhận khi đơn hàng đã được giao" });
+
+            order.Status = "Completed";
+            await _orderRepository.UpdateAsync(order);
+
+            return Ok(new { message = "Xác nhận nhận hàng thành công", order });
         }
 
         // Huỷ đơn — chỉ khi đang WaitingDeposit (chưa thanh toán), user chỉ hủy đơn của mình

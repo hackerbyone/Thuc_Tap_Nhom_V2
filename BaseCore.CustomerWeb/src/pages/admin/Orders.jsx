@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { buildUrl, getHeaders, handleResponse } from '../../services/utils/apiClient';
 
 const STATUS_LIST = [
-  { value: 'WaitingDeposit', label: 'Chờ đặt cọc', badge: 'badge-warning', icon: 'fa-hourglass-half',  next: 'DepositPaid', nextLabel: 'Xác nhận cọc', nextBtn: 'btn-success' },
-  { value: 'DepositPaid',    label: 'Đã đặt cọc',  badge: 'badge-primary', icon: 'fa-money-bill-wave', next: 'Processing',  nextLabel: 'Bắt đầu xử lý', nextBtn: 'btn-info'   },
-  { value: 'Processing',     label: 'Đang xử lý',  badge: 'badge-info',    icon: 'fa-cog',             next: 'Shipping',    nextLabel: 'Giao hàng',     nextBtn: 'btn-primary'},
-  { value: 'Shipping',       label: 'Đang giao',   badge: 'badge-info',    icon: 'fa-truck',           next: 'Completed',   nextLabel: 'Hoàn thành',    nextBtn: 'btn-success'},
-  { value: 'Completed',      label: 'Hoàn thành',  badge: 'badge-success', icon: 'fa-check-circle',    next: null,          nextLabel: null,             nextBtn: null         },
-  { value: 'Cancelled',      label: 'Đã hủy',      badge: 'badge-danger',  icon: 'fa-times-circle',    next: null,          nextLabel: null,             nextBtn: null         },
+  { value: 'WaitingDeposit', label: 'Chờ đặt cọc',        badge: 'badge-warning', icon: 'fa-hourglass-half',  next: 'DepositPaid', nextLabel: 'Xác nhận cọc',   nextBtn: 'btn-success' },
+  { value: 'DepositPaid',    label: 'Đã đặt cọc',          badge: 'badge-primary', icon: 'fa-money-bill-wave', next: 'Processing',  nextLabel: 'Bắt đầu xử lý', nextBtn: 'btn-info'    },
+  { value: 'Processing',     label: 'Đang xử lý',          badge: 'badge-info',    icon: 'fa-cog',             next: 'Shipping',    nextLabel: 'Giao hàng',      nextBtn: 'btn-primary' },
+  { value: 'Shipping',       label: 'Đang giao',            badge: 'badge-info',    icon: 'fa-truck',           next: 'Delivered',   nextLabel: 'Xác nhận đã giao', nextBtn: 'btn-success'},
+  { value: 'Delivered',      label: 'Đã giao hàng',         badge: 'badge-secondary', icon: 'fa-box-open',      next: null,          nextLabel: null,              nextBtn: null          },
+  { value: 'Completed',      label: 'Hoàn thành',           badge: 'badge-success', icon: 'fa-check-circle',    next: null,          nextLabel: null,              nextBtn: null          },
+  { value: 'Cancelled',      label: 'Đã hủy',               badge: 'badge-danger',  icon: 'fa-times-circle',    next: null,          nextLabel: null,              nextBtn: null          },
 ];
 
 const statusLabel = (val) =>
@@ -398,7 +399,7 @@ export default function Orders() {
                                 className="form-control form-control-sm d-inline-block mr-1"
                                 value={order.status}
                                 onChange={e => handleUpdateStatus(order.id, e.target.value)}
-                                disabled={updating || order.status === 'Completed' || order.status === 'Cancelled'}
+                                disabled={updating || ['Delivered', 'Completed', 'Cancelled'].includes(order.status)}
                                 style={{ width: 140, verticalAlign: 'middle' }}
                               >
                                 {STATUS_LIST.map(s => (
@@ -536,10 +537,14 @@ export default function Orders() {
                       <div className="mt-3">
                         <strong>Cập nhật trạng thái:</strong>
                         <div className="mt-2 d-flex align-items-center flex-wrap" style={{ gap: 8 }}>
-                          {['Completed', 'Cancelled'].includes(selected.status) ? (
+                          {['Delivered', 'Completed', 'Cancelled'].includes(selected.status) ? (
                             <span className="text-muted small">
                               <i className="fas fa-lock mr-1"></i>
-                              Đơn hàng đã {selected.status === 'Completed' ? 'hoàn thành' : 'bị hủy'}, không thể thay đổi
+                              {selected.status === 'Delivered'
+                                ? 'Đã giao — chờ khách xác nhận nhận hàng'
+                                : selected.status === 'Completed'
+                                  ? 'Đơn hàng đã hoàn thành'
+                                  : 'Đơn hàng đã bị hủy'}
                             </span>
                           ) : (() => {
                             const stInfo = statusLabel(selected.status);

@@ -93,9 +93,9 @@ export default function Cart() {
     setQty(item.id, item.quantity + 1)
   }
 
-  const shipping = shippingMethod === 'Express' ? 65000 : shippingMethod === 'LiveAnimal' ? 80000 : (total >= 500000 ? 0 : 35000)
-  const packagingFee = shippingMethod === 'LiveAnimal' ? 50000 : 0
-  const grandTotal = total + shipping + packagingFee
+  const shipping = shippingMethod === 'Express' ? 65000 : (total >= 500000 ? 0 : 35000)
+  const packagingFee = 0
+  const grandTotal = total + shipping
 
   const handleCheckoutChange = (field, value) => {
     setCheckoutData(prev => ({ ...prev, [field]: value }))
@@ -276,17 +276,11 @@ export default function Cart() {
               <span>{formatPrice(total)}</span>
             </div>
             <div className={styles.summaryRow}>
-              <span>Phí vận chuyển{shippingMethod === 'Express' ? ' (Nhanh)' : shippingMethod === 'LiveAnimal' ? ' (Cá sống)' : ''}</span>
+              <span>Phí vận chuyển{shippingMethod === 'Express' ? ' (Nhanh)' : ''}</span>
               <span className={shipping === 0 ? styles.free : ''}>
                 {shipping === 0 ? 'Miễn phí' : formatPrice(shipping)}
               </span>
             </div>
-            {packagingFee > 0 && (
-              <div className={styles.summaryRow}>
-                <span>Phí đóng gói sống</span>
-                <span>{formatPrice(packagingFee)}</span>
-              </div>
-            )}
             {shippingMethod === 'Standard' && total < 500000 && (
               <p className={styles.shippingNote}>
                 Thêm <strong>{formatPrice(500000 - total)}</strong> để được miễn phí vận chuyển
@@ -398,7 +392,6 @@ export default function Cart() {
                       {[
                         { key: 'Standard', label: 'Tiêu chuẩn', desc: `${total >= 500000 ? 'Miễn phí (đơn ≥ 500K)' : '35.000đ'}`, icon: '📦' },
                         { key: 'Express', label: 'Nhanh (Express)', desc: '65.000đ', icon: '⚡' },
-                        { key: 'LiveAnimal', label: 'Giao cá sống', desc: '80.000đ + 50.000đ đóng gói', icon: '🐟' },
                       ].map(opt => (
                         <label key={opt.key} style={{
                           display: 'flex', alignItems: 'center', gap: '0.6rem',

@@ -90,6 +90,7 @@
 
 .statusPending   { color: #f59e0b; }
 .statusShipping  { color: #3b82f6; }
+.statusDelivered { color: #7c3aed; font-weight: 600; }
 .statusCompleted { color: #10b981; }
 .statusCancelled { color: #ef4444; }
 .statusWaiting   { color: #e65100; }
@@ -252,6 +253,24 @@
 
 .btnReview:hover {
   background-color: #d97706;
+  transform: translateY(-1px);
+}
+
+/* Nút xác nhận đã nhận hàng */
+.btnConfirm {
+  padding: 8px 14px;
+  background-color: #7c3aed;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btnConfirm:hover {
+  background-color: #6d28d9;
   transform: translateY(-1px);
 }
 

@@ -25,8 +25,6 @@ export default function OrderHistory() {
   const [loading, setLoading] = useState(true);
   const [expandedOrders, setExpandedOrders] = useState(new Set());
 
-  const [loyaltyPoints, setLoyaltyPoints] = useState(null);
-
   // reviewedProductKeys: Set của "orderId_productId" đã được đánh giá
   const [reviewedProductKeys, setReviewedProductKeys] = useState(new Set());
   const [reviewOrderId, setReviewOrderId] = useState(null);
@@ -61,15 +59,8 @@ export default function OrderHistory() {
     } catch { }
   };
 
-  const fetchLoyaltyPoints = async () => {
-    try {
-      const data = await orderService.getMyPoints();
-      setLoyaltyPoints(data.loyaltyPoints ?? 0);
-    } catch { }
-  };
-
   useEffect(() => {
-    if (user) { fetchOrders(); fetchReviewedProducts(); fetchLoyaltyPoints(); }
+    if (user) { fetchOrders(); fetchReviewedProducts(); }
   }, [user]);
 
   const toggleExpand = (orderId) => {
@@ -78,6 +69,16 @@ export default function OrderHistory() {
       next.has(orderId) ? next.delete(orderId) : next.add(orderId);
       return next;
     });
+  };
+
+  const handleConfirmReceived = async (orderId) => {
+    if (!window.confirm('Xác nhận bạn đã nhận được hàng? Sau khi xác nhận bạn có thể đánh giá sản phẩm.')) return;
+    try {
+      await orderService.confirmReceived(orderId);
+      fetchOrders();
+    } catch (error) {
+      alert(error.message || 'Không thể xác nhận nhận hàng');
+    }
   };
 
   const handleCancelOrder = async (orderId) => {
@@ -163,6 +164,7 @@ export default function OrderHistory() {
       DepositPaid:    { cls: styles.statusDeposit,   label: '💳 Đã đặt cọc' },
       Processing:     { cls: styles.statusPending,   label: '⚙️ Đang xử lý' },
       Shipping:       { cls: styles.statusShipping,  label: '🚚 Đang giao hàng' },
+      Delivered:      { cls: styles.statusDelivered, label: '📦 Đã giao — chờ xác nhận' },
       Completed:      { cls: styles.statusCompleted, label: '✅ Hoàn thành' },
       Cancelled:      { cls: styles.statusCancelled, label: '❌ Đã hủy' },
       Pending:        { cls: styles.statusPending,   label: '⏳ Đang chờ duyệt' },
@@ -176,18 +178,7 @@ export default function OrderHistory() {
 
   return (
     <main className={styles.page}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
-        <h1 className={styles.title} style={{ margin: 0 }}>Đơn hàng của tôi</h1>
-        {loyaltyPoints !== null && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'linear-gradient(135deg, #fff8e1, #fffde7)', border: '1.5px solid #f59e0b', borderRadius: 10, padding: '0.5rem 1rem' }}>
-            <span style={{ fontSize: '1.5rem' }}>⭐</span>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#b45309' }}>{loyaltyPoints.toLocaleString('vi-VN')} điểm</div>
-              <div style={{ fontSize: '0.75rem', color: '#78350f' }}>Điểm tích lũy của bạn</div>
-            </div>
-          </div>
-        )}
-      </div>
+      <h1 className={styles.title} style={{ marginBottom: '1rem' }}>Đơn hàng của tôi</h1>
 
       {orders.length === 0 ? (
         <p>Bạn chưa có đơn hàng nào. <Link to="/products">Đi mua cá ngay!</Link></p>
@@ -255,13 +246,21 @@ export default function OrderHistory() {
                               💳 Thanh toán
                             </button>
                           )}
-                          {['DepositPaid', 'Processing', 'Shipping'].includes(order.status) && (
+                          {['DepositPaid', 'Processing', 'Shipping', 'Delivered'].includes(order.status) && (
                             <button
                               onClick={() => navigate(`/payment/${order.id}`)}
                               className={styles.btnTrack}
                               title="Theo dõi đơn hàng"
                             >
                               📍 Theo dõi
+                            </button>
+                          )}
+                          {order.status === 'Delivered' && (
+                            <button
+                              onClick={() => handleConfirmReceived(order.id)}
+                              className={styles.btnConfirm}
+                            >
+                              ✅ Đã nhận hàng
                             </button>
                           )}
                           {order.status === 'WaitingDeposit' && (
