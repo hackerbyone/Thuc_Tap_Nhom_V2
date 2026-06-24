@@ -39,6 +39,7 @@ const Products = () => {
     });
     const [error, setError] = useState('');
     const [uploadingImage, setUploadingImage] = useState(false);
+    const [hoveredId, setHoveredId] = useState(null);
     const { isAdmin } = useAuth();
 
     useEffect(() => {
@@ -313,10 +314,30 @@ const Products = () => {
                                             Không tìm thấy sản phẩm nào
                                         </div>
                                     ) : (
+                                        <div style={{
+                                            background: 'linear-gradient(135deg, #e8f4fd 0%, #f0f7ff 50%, #e3f0fa 100%)',
+                                            borderRadius: '12px',
+                                            padding: '20px 16px 8px 16px',
+                                            margin: '-8px -8px 0 -8px',
+                                            boxShadow: 'inset 0 2px 8px rgba(61,139,194,0.08)',
+                                        }}>
                                         <div className="row">
                                             {products.map(product => (
                                                 <div key={product.id} className="col-xl-3 col-lg-4 col-md-6 col-sm-6 mb-4">
-                                                    <div className="card h-100 shadow-sm" style={{ border: '1px solid #e0eaf3', borderRadius: '10px', overflow: 'hidden' }}>
+                                                    <div
+                                                        className="card h-100"
+                                                        onMouseEnter={() => setHoveredId(product.id)}
+                                                        onMouseLeave={() => setHoveredId(null)}
+                                                        style={{
+                                                            border: hoveredId === product.id ? '1.5px solid #3d8bc2' : '1px solid #e0eaf3',
+                                                            borderRadius: '10px',
+                                                            overflow: 'hidden',
+                                                            transform: hoveredId === product.id ? 'translateY(-6px) scale(1.02)' : 'none',
+                                                            boxShadow: hoveredId === product.id ? '0 8px 24px rgba(61,139,194,0.22)' : '0 1px 4px rgba(0,0,0,0.07)',
+                                                            transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+                                                            cursor: 'pointer',
+                                                        }}
+                                                    >
                                                         <div style={{ position: 'relative', height: '180px', background: '#f0f6fb', overflow: 'hidden' }}>
                                                             {product.imageUrl ? (
                                                                 <img
@@ -378,6 +399,7 @@ const Products = () => {
                                                     </div>
                                                 </div>
                                             ))}
+                                        </div>
                                         </div>
                                     )}
 
