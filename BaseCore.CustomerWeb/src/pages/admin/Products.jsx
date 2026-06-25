@@ -12,7 +12,7 @@ const Products = () => {
     const [keyword, setKeyword] = useState('');
     const [categoryId, setCategoryId] = useState('');
     const [page, setPage] = useState(1);
-    const [pageSize] = useState(10);
+    const [pageSize] = useState(12);
     const [totalPages, setTotalPages] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
     const [showModal, setShowModal] = useState(false);
