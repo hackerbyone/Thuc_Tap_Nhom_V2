@@ -15,7 +15,7 @@ begin
   require 'tiny_tds'
   # Cấu hình kết nối SQL Server
   DB_CLIENT = TinyTds::Client.new(
-    dataserver: 'localhost',
+    dataserver: 'MinhTri',
     database: 'FishDB',
     integrated_security: true # Windows Authentication
   )

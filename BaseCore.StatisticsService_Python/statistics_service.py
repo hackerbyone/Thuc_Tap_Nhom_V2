@@ -17,7 +17,7 @@ try:
     import pyodbc
     conn_str = (
         r'DRIVER={ODBC Driver 17 for SQL Server};'
-        r'SERVER=localhost;'
+        r'SERVER=MinhTri;'
         r'DATABASE=FishDB;'
         r'Trusted_Connection=yes;'
         r'Encrypt=yes;'
