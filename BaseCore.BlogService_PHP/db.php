@@ -1,5 +1,6 @@
 <?php
 // Cấu hình Database kết nối tới SQL Server
+// LƯU Ý: Đổi 'MinhTri' thành tên máy chủ SQL Server của bạn nếu tải code về máy khác
 $host = 'MinhTri';
 $dbname = 'FishDB';
 

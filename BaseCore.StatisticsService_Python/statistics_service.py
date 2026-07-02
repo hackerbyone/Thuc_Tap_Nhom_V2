@@ -15,6 +15,7 @@ USE_SQL_SERVER = False
 conn = None
 try:
     import pyodbc
+    # LƯU Ý: Đổi 'MinhTri' thành tên máy chủ SQL Server của bạn nếu tải code về máy khác
     conn_str = (
         r'DRIVER={ODBC Driver 17 for SQL Server};'
         r'SERVER=MinhTri;'

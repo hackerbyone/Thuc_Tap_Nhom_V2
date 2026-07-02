@@ -14,6 +14,7 @@ USE_SQL_SERVER = false
 begin
   require 'tiny_tds'
   # Cấu hình kết nối SQL Server
+  # LƯU Ý: Đổi 'MinhTri' thành tên máy chủ SQL Server của bạn nếu tải code về máy khác
   DB_CLIENT = TinyTds::Client.new(
     dataserver: 'MinhTri',
     database: 'FishDB',
