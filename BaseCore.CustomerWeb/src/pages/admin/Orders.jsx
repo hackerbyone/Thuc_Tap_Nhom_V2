@@ -401,22 +401,28 @@ export default function Orders() {
                               <button className="btn btn-sm btn-outline-primary mr-1" onClick={() => openDetail(order)} title="Xem chi tiết">
                                 <i className="fas fa-eye"></i>
                               </button>
-                              <select
-                                className="form-control form-control-sm d-inline-block mr-1"
-                                value={order.status}
-                                onChange={e => handleUpdateStatus(order.id, e.target.value)}
-                                disabled={updating || ['Delivered', 'Completed', 'Cancelled'].includes(order.status)}
-                                style={{ width: 140, verticalAlign: 'middle' }}
-                              >
-                                {STATUS_LIST.map(s => (
-                                  <option key={s.value} value={s.value}>{s.label}</option>
-                                ))}
-                              </select>
-                              {order.status === 'WaitingDeposit' && (
-                                <button className="btn btn-sm btn-danger" onClick={() => handleCancel(order.id)} disabled={updating} title="Hủy đơn">
-                                  <i className="fas fa-times"></i>
-                                </button>
-                              )}
+                              {(() => {
+                                const st2 = STATUS_LIST.find(s => s.value === order.status);
+                                return (
+                                  <>
+                                    {st2?.next && (
+                                      <button
+                                        className={`btn btn-sm ${st2.nextBtn} mr-1`}
+                                        onClick={() => handleUpdateStatus(order.id, st2.next)}
+                                        disabled={updating}
+                                        title={st2.nextLabel}
+                                      >
+                                        <i className="fas fa-arrow-right mr-1"></i>{st2.nextLabel}
+                                      </button>
+                                    )}
+                                    {['WaitingDeposit', 'DepositPaid', 'Processing'].includes(order.status) && (
+                                      <button className="btn btn-sm btn-danger" onClick={() => handleCancel(order.id)} disabled={updating} title="Hủy đơn">
+                                        <i className="fas fa-times"></i>
+                                      </button>
+                                    )}
+                                  </>
+                                );
+                              })()}
                             </td>
                           </tr>
                         );
