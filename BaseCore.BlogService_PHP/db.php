@@ -1,6 +1,6 @@
 <?php
 // Cấu hình Database kết nối tới SQL Server
-$host = 'localhost';
+$host = 'MinhTri';
 $dbname = 'FishDB';
 
 $use_json_fallback = false;
